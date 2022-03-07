@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workout_overview__title">Your Workout</string>
+    <string name="workout__finish">finish</string>
+    <string name="workout__cancel">cancel</string>
+    <string name="workout__finish_description">finish the workout and send results</string>
+    <string name="workout__cancel_description">cancel workout and dismiss results</string>
+    <string name="workout_overview__todays_workout_title">Todays Workout</string>
+</resources>
