@@ -5,19 +5,41 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
+object SettingsScreen {
+    const val ROUTE = "settings"
+}
+
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
-    Column(modifier = Modifier
-        .verticalScroll(scrollState)
-        .padding(AppTheme.spacings.md)) {
-        Text(text = "Some Setting")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.workout__screen_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "BACK")
+                    }
+                })
+        }
+    ) {innerPadding ->
+        Column(modifier = Modifier
+            .verticalScroll(scrollState)
+            .padding(innerPadding)
+            .padding(AppTheme.spacings.md)) {
+            Text(text = "Some Setting")
+        }
     }
 }
 
@@ -31,6 +53,6 @@ fun SettingsScreen() {
 @Composable
 fun PreviewSettingsScreen() {
     AppTheme {
-        SettingsScreen()
+        SettingsScreen(onNavigateBack = {})
     }
 }
