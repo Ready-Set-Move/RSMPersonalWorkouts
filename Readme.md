@@ -8,6 +8,13 @@ To make gradle sync with cocoapods behave on M1 MacBooks you need to follow thes
 
 Homebrew needs to be installed under `/opt/homebrew`. If that's not the case follow [these instructions](https://docs.brew.sh/Installation#untar-anywhere).
 
+If you have multiple installations of homebrew, make sure to use the /opt/homebrew one by adding the following to your `~/.zshrc`:
+
+```
+cd /opt
+eval "$(homebrew/bin/brew shellenv)"
+```
+
 ### Cocoapods
 
 Simply `sudo gem uninstall cocoapods` and then `brew install cocoapods`. Now the project should sync. If not follow the instructions below with a different ruby version.

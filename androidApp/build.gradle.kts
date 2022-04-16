@@ -2,7 +2,7 @@ plugins {
     id("com.android.application")
     kotlin("android")
 }
-
+val composeVersion = "1.1.1"
 android {
     compileSdk = 32
     defaultConfig {
@@ -17,11 +17,38 @@ android {
             isMinifyEnabled = false
         }
     }
-}
+    buildFeatures {
+        // Enables Jetpack Compose for this module
+        compose = true
+    }
+    // Set both the Java and Kotlin compilers to target Java 8.
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = composeVersion
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
 
-dependencies {
-    implementation(project(":shared"))
-    implementation("com.google.android.material:material:1.4.0")
-    implementation("androidx.appcompat:appcompat:1.3.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.0")
+    dependencies {
+        implementation(project(":shared"))
+        implementation("androidx.compose.ui:ui:$composeVersion")
+        // Integration with activities
+        implementation("androidx.activity:activity-compose:1.4.0")
+        // Material Design
+        implementation("androidx.compose.material:material:$composeVersion")
+        // Animations
+        implementation("androidx.compose.animation:animation:$composeVersion")
+        // Tooling support (Previews, etc.)
+        implementation("androidx.compose.ui:ui-tooling:$composeVersion")
+        // Icons
+        implementation("androidx.compose.material:material-icons-extended:$composeVersion")
+        // navigation
+        implementation("androidx.navigation:navigation-compose:2.4.2")
+        // UI Tests
+        androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
+    }
 }
