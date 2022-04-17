@@ -12,6 +12,8 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.Exercise
 import com.readysetmove.personalworkouts.android.R
@@ -27,13 +29,21 @@ object WorkoutOverviewScreen {
 @Composable
 fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
     val scrollState = rememberScrollState()
+    val title = stringResource(R.string.workout_overview__screen_title)
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.workout_overview__screen_title)) })
+            TopAppBar(
+                title = { Text(text = title) },
+                Modifier.semantics { contentDescription = title }
+            )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(text = { Text(text = "FAB") },
-                onClick = onStartWorkout)
+            val actionText = stringResource(R.string.workout_overview__start_workout)
+            ExtendedFloatingActionButton(
+                text = { Text(text = actionText) },
+                onClick = onStartWorkout,
+                modifier = Modifier.semantics { contentDescription = actionText }
+            )
         }) { innerPadding ->
         Column(modifier = Modifier
             .verticalScroll(scrollState)

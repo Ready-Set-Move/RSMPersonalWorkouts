@@ -11,6 +11,7 @@ android {
         targetSdk = 32
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         getByName("release") {
@@ -50,5 +51,9 @@ android {
         implementation("androidx.navigation:navigation-compose:2.4.2")
         // UI Tests
         androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
+        debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
+    }
+    packagingOptions {
+        resources.excludes.add("META-INF/*")
     }
 }

@@ -8,11 +8,11 @@
     <string name="workout_overview__todays_workout_title">Today\'s workout</string>
     <string name="workout_overview__todays_workout_hint">Today\'s workout contains of:</string>
     <string name="workout_overview__start_workout">Start Workout</string>
-    <string name="workout_overview__start_workout_desc">Starts the shown workout</string>
     <string name="expandable_card__more">More</string>
     <string name="expandable_card__less">Less</string>
     <string name="application__label">Ready Set Move – Personal Workouts</string>
     <string name="workout_overview__screen_title">Workout Overview</string>
     <string name="settings__screen_title">Settings</string>
-    <string name="workout__screen_title">Workout</string>
+    <string name="workout__screen_title">Active Workout</string>
+    <string name="navigation__back">Go back</string>
 </resources>

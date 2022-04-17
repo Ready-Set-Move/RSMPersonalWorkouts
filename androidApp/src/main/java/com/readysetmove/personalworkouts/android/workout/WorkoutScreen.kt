@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
@@ -22,16 +24,19 @@ object WorkoutScreen {
 @Composable
 fun WorkoutScreen(onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
+    val title = stringResource(R.string.workout__screen_title)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.workout__screen_title)) },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "BACK")
+                            contentDescription = stringResource(R.string.navigation__back))
                     }
-                })
+                },
+                modifier = Modifier.semantics { contentDescription = title }
+            )
         }
     ) { innerPadding ->
         Column(modifier = Modifier
