@@ -15,4 +15,7 @@
     <string name="settings__screen_title">Settings</string>
     <string name="workout__screen_title">Active Workout</string>
     <string name="navigation__back">Go back</string>
+    <string name="device_management_overview__screen_title">Devices</string>
+    <string name="device_management_overview__scan">Scan for device</string>
+    <string name="grant_permissions__screen_title">Permissions</string>
 </resources>

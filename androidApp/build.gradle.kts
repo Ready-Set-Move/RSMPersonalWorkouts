@@ -49,6 +49,8 @@ android {
         implementation("androidx.compose.material:material-icons-extended:$composeVersion")
         // navigation
         implementation("androidx.navigation:navigation-compose:2.4.2")
+        // Permission handling or jetpack compose
+        implementation("com.google.accompanist:accompanist-permissions:0.24.7-alpha")
         // UI Tests
         androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
         debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")

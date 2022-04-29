@@ -13,6 +13,7 @@ data class Workout(val exercises: List<Exercise>, val comment: String)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             val navController = rememberNavController()
             AppTheme {
