@@ -1,9 +1,9 @@
 package com.readysetmove.personalworkouts.android.components
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Card
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -23,12 +23,17 @@ import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.Workout
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun WorkoutOverviewCard(title: String, workout: Workout) {
     var expanded by rememberSaveable {
         mutableStateOf(true)
     }
-    Card(modifier = Modifier.clickable { expanded = !expanded }) {
+    Card(
+        onClick = { expanded = !expanded },
+        onClickLabel = if (expanded) "Hide detailed workout information" else "Show detailed workout information"
+    )
+    {
         Column(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = AppTheme.spacings.md)) {

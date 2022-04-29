@@ -8,29 +8,23 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.readysetmove.personalworkouts.android.device.Device
 import com.readysetmove.personalworkouts.android.device.management.DeviceManagementOverviewScreen
 import com.readysetmove.personalworkouts.android.permissions.GrantPermissionsScreen
 import com.readysetmove.personalworkouts.android.settings.SettingsScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -55,12 +49,6 @@ fun RSMNavHost(navController: NavHostController) {
         }
     }
 
-    var scanningInProgress by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var devices by rememberSaveable {
-        mutableStateOf(listOf(Device(name = "Test 1"), Device(name = "Test 2")))
-    }
     DisposableEffect(context) {
         val broadcast = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -72,22 +60,22 @@ fun RSMNavHost(navController: NavHostController) {
             context.unregisterReceiver(broadcast)
         }
     }
-    if (scanningInProgress) {
-        LaunchedEffect(true) {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.BLUETOOTH_SCAN
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                if (bluetoothAdapter.isDiscovering) {
-                    bluetoothAdapter.cancelDiscovery()
-                }
-                bluetoothAdapter.startDiscovery()
-            }
-            delay(1000)
-            devices = listOf(Device(name = "Scanned 1"), Device(name = "Scanned 2"))
-        }
-    }
+//    if (scanningInProgress) {
+//        LaunchedEffect(true) {
+//            if (ActivityCompat.checkSelfPermission(
+//                    context,
+//                    Manifest.permission.BLUETOOTH_SCAN
+//                ) == PackageManager.PERMISSION_GRANTED
+//            ) {
+//                if (bluetoothAdapter.isDiscovering) {
+//                    bluetoothAdapter.cancelDiscovery()
+//                }
+//                bluetoothAdapter.startDiscovery()
+//            }
+//            delay(1000)
+//            devices = listOf(Device(name = "Scanned 1"), Device(name = "Scanned 2"))
+//        }
+//    }
 
     val btPermissions = rememberMultiplePermissionsState(
         if (Build.VERSION.SDK_INT >= 31) listOf(
@@ -149,18 +137,7 @@ fun RSMNavHost(navController: NavHostController) {
             WorkoutScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {
-            DeviceManagementOverviewScreen(
-                devices = devices,
-                scanningInProgress = scanningInProgress,
-                onStartScan = {
-                    scanningInProgress = true
-                },
-                onStopScan = {
-                    scanningInProgress = false
-                }
-            ) {
-                // TODO: select device action
-            }
+            DeviceManagementOverviewScreen()
         }
     }
 }

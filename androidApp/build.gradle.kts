@@ -2,7 +2,9 @@ plugins {
     id("com.android.application")
     kotlin("android")
 }
+
 val composeVersion = "1.1.1"
+
 android {
     compileSdk = 32
     defaultConfig {
@@ -54,6 +56,10 @@ android {
         // UI Tests
         androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
         debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
+        // Koin DI
+        implementation(libs.koin.core)
+        implementation(libs.koin.android)
+        implementation(libs.koin.androidx)
     }
     packagingOptions {
         resources.excludes.add("META-INF/*")

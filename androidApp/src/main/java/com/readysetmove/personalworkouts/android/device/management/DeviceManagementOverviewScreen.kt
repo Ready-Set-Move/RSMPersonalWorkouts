@@ -1,6 +1,5 @@
 package com.readysetmove.personalworkouts.android.device.management
 
-import android.Manifest
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,18 +13,17 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.android.device.Device
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
+import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import org.koin.androidx.compose.get
 
 
 object DeviceManagementOverviewScreen {
@@ -33,15 +31,14 @@ object DeviceManagementOverviewScreen {
 }
 
 @Composable
-fun DeviceManagementOverviewScreen(devices: List<Device>, scanningInProgress: Boolean, onStartScan: () -> Unit, onStopScan: () -> Unit, onDeviceSelected: (device: Device) -> Unit) {
+fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
-    val currentOnStartScan by rememberUpdatedState(onStartScan)
-    val currentOnStopScan by rememberUpdatedState(onStopScan)
-    DisposableEffect(onStartScan, onStopScan) {
-        currentOnStartScan()
-        onDispose { currentOnStopScan() }
+    DisposableEffect(true) {
+        store.dispatch(BluetoothAction.StartScanning(""))
+        onDispose { store.dispatch(BluetoothAction.StopScanning) }
     }
+    val state = store.observeState().collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -55,13 +52,16 @@ fun DeviceManagementOverviewScreen(devices: List<Device>, scanningInProgress: Bo
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)
         ) {
-            devices.map {
-                DeviceOverviewCard(device = it) { device ->
-                    onDeviceSelected(device)
+            state.value.devices.map {
+                DeviceOverviewCard(
+                    device = it,
+                    selected = it == state.value.activeDevice
+                ) { device ->
+                    store.dispatch(BluetoothAction.UseDevice(device = device))
                 }
                 Spacer(modifier = Modifier.height(AppTheme.spacings.sm))
             }
-            if (scanningInProgress) {
+            if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))
                 CircularProgressIndicator()
             }
@@ -79,12 +79,6 @@ fun DeviceManagementOverviewScreen(devices: List<Device>, scanningInProgress: Bo
 @Composable
 fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
-        DeviceManagementOverviewScreen(
-            devices = listOf(Device(name = "Dev0"), Device(name = "Dev1")),
-            scanningInProgress = true,
-            onStartScan = {},
-            onStopScan = {},
-            onDeviceSelected = {}
-        )
+        DeviceManagementOverviewScreen(store = BluetoothStore())
     }
 }

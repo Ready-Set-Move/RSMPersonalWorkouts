@@ -5,10 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,11 +39,15 @@ fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
         floatingActionButton = {
             val actionText = stringResource(R.string.workout_overview__start_workout)
             ExtendedFloatingActionButton(
+                icon = {
+                    Icon(imageVector = Icons.Filled.PlayCircle,
+                        contentDescription = actionText)
+                },
                 text = { Text(text = actionText) },
                 onClick = onStartWorkout,
-                modifier = Modifier.semantics { contentDescription = actionText }
             )
-        }) { innerPadding ->
+        },
+    ) { innerPadding ->
         Column(modifier = Modifier
             .verticalScroll(scrollState)
             .padding(innerPadding)
@@ -55,7 +58,7 @@ fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
     }
 }
 
-@Preview(name = "Light Mode", widthDp = 1024)
+@Preview(name = "Light Mode", widthDp = 320)
 @Preview(
     name = "Dark Mode",
     uiMode = Configuration.UI_MODE_NIGHT_YES,
