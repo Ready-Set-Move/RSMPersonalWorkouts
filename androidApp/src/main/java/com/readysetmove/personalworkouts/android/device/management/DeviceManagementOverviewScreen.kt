@@ -22,7 +22,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
+import com.readysetmove.personalworkouts.bluetooth.BluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.bluetooth.Device
 import org.koin.androidx.compose.get
 
 
@@ -35,7 +37,7 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
     DisposableEffect(true) {
-        store.dispatch(BluetoothAction.StartScanning(""))
+        store.dispatch(BluetoothAction.ScanAndConnect)
         onDispose { store.dispatch(BluetoothAction.StopScanning) }
     }
     val state = store.observeState().collectAsState()
@@ -52,13 +54,8 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)
         ) {
-            state.value.devices.map {
-                DeviceOverviewCard(
-                    device = it,
-                    selected = it == state.value.activeDevice
-                ) { device ->
-                    store.dispatch(BluetoothAction.UseDevice(device = device))
-                }
+            state.value.activeDevice?.let {
+                DeviceOverviewCard(it)
                 Spacer(modifier = Modifier.height(AppTheme.spacings.sm))
             }
             if (state.value.scanning) {
@@ -79,6 +76,12 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
 @Composable
 fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
-        DeviceManagementOverviewScreen(store = BluetoothStore())
+        DeviceManagementOverviewScreen(store = BluetoothStore(object : BluetoothService {
+            override suspend fun scanForDevice(deviceName: String): Device {
+                return Device(deviceName)
+            }
+
+            override fun stopScan() {}
+        }))
     }
 }

@@ -1,6 +1,9 @@
 package com.readysetmove.personalworkouts.android
 
 import android.app.Application
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -15,7 +18,11 @@ class App : Application() {
     }
 
     private val appModule = module {
-        single { BluetoothStore() }
+        single {
+            val bluetoothManager =
+                androidContext().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            BluetoothStore(AndroidBluetoothService(bluetoothManager.adapter))
+        }
     }
 
     private fun insertKoin() {

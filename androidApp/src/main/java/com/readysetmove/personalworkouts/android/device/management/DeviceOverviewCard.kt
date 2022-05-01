@@ -1,7 +1,6 @@
 package com.readysetmove.personalworkouts.android.device.management
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,11 +13,8 @@ import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.bluetooth.Device
 
 @Composable
-fun DeviceOverviewCard(device: Device, selected: Boolean, onClick: (device: Device) -> Unit) {
-    Card(
-        modifier = Modifier.clickable { onClick(device) },
-        backgroundColor = if (selected) AppTheme.colors.primary else AppTheme.colors.surface
-    ) {
+fun DeviceOverviewCard(device: Device) {
+    Card {
         Column(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = AppTheme.spacings.md)
@@ -40,7 +36,7 @@ fun DeviceOverviewCard(device: Device, selected: Boolean, onClick: (device: Devi
 fun PreviewDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(device = Device(name = "Your Device"), selected = false) {}
+            DeviceOverviewCard(Device(name = "Your Device"))
         }
     }
 }
@@ -56,7 +52,7 @@ fun PreviewDeviceOverviewCard() {
 fun PreviewSelectedDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(device = Device(name = "Your Device"), selected = true) {}
+            DeviceOverviewCard(Device(name = "Your Device"))
         }
     }
 }
