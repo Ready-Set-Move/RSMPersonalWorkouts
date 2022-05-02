@@ -4,31 +4,20 @@ import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 data class BluetoothState(
     val scanning: Boolean,
     val activeDevice: Device?,
+    val deviceName: String?,
 ) : State
 
 sealed class BluetoothAction : Action {
-    sealed class ScanAndConnect {
-        companion object : BluetoothAction()
-    }
-
-    sealed class StopScanning {
-        companion object : BluetoothAction()
-    }
-
+    data class SetDeviceName(val name: String?) : BluetoothAction()
+    object ScanAndConnect : BluetoothAction()
+    data class StopScanning(val error: Exception? = null) : BluetoothAction()
     data class DeviceConnected(val device: Device) : BluetoothAction()
-    data class Error(val error: Exception) : BluetoothAction()
 }
 
 
@@ -41,28 +30,63 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
     CoroutineScope by CoroutineScope(Dispatchers.Main) {
 
     private val state = MutableStateFlow(
-        BluetoothState(scanning = false, activeDevice = null)
+        BluetoothState(scanning = false, activeDevice = null, deviceName = "Roberts Waage")
     )
     private val sideEffect = MutableSharedFlow<BluetoothSideEffect>()
+    private var connectJob: Job? = null
 
     override fun observeState(): StateFlow<BluetoothState> = state
     override fun observeSideEffect(): Flow<BluetoothSideEffect> = sideEffect
+
+    init {
+        launch {
+            observeState().collect {
+                val connectJobActive = connectJob?.isActive ?: false
+                if (it.scanning && !connectJobActive) {
+                    if (connectJobActive) connectJob?.cancel()
+
+                    val deviceName = state.value.deviceName
+                    if (deviceName != null) {
+                        connectJob = launch {
+                            scanForBtleDevice(deviceName)
+                        }
+                    } else {
+                        dispatch(BluetoothAction.StopScanning())
+                    }
+                } else if (!it.scanning && connectJob?.isActive == true) {
+                    connectJob?.cancel()
+                }
+            }
+        }
+    }
 
     override fun dispatch(action: BluetoothAction) {
         val oldState = state.value
 
         val newState = when (action) {
-            is BluetoothAction.ScanAndConnect.Companion -> {
-                if (!oldState.scanning) {
-                    launch { scanForBtleDevice() }
-                    oldState.copy(scanning = true)
-                } else {
-                    oldState
+            is BluetoothAction.SetDeviceName -> {
+                dispatch(BluetoothAction.StopScanning())
+                oldState.copy(deviceName = action.name)
+            }
+            is BluetoothAction.ScanAndConnect -> {
+                when {
+                    oldState.deviceName == null -> {
+                        launch {
+                            sideEffect.emit(BluetoothSideEffect.Error(Exception("Unexpected action: can't scan for device without name")))
+                        }
+                        oldState
+                    }
+                    !oldState.scanning -> {
+                        oldState.copy(scanning = true)
+                    }
+                    else -> oldState
                 }
             }
-            is BluetoothAction.StopScanning.Companion -> {
+            is BluetoothAction.StopScanning -> {
                 if (oldState.scanning) {
-                    bluetoothService.stopScan()
+                    if (action.error != null) {
+                        launch { sideEffect.emit(BluetoothSideEffect.Error(action.error)) }
+                    }
                     oldState.copy(scanning = false)
                 } else {
                     oldState
@@ -70,18 +94,8 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
             }
             is BluetoothAction.DeviceConnected -> {
                 if (oldState.activeDevice != action.device) {
-                    oldState.copy(activeDevice = action.device)
+                    oldState.copy(activeDevice = action.device, scanning = false)
                 } else {
-                    oldState
-                }
-            }
-            is BluetoothAction.Error -> {
-                if (oldState.scanning) {
-                    launch { sideEffect.emit(BluetoothSideEffect.Error(action.error)) }
-                    BluetoothState(scanning = false, activeDevice = null)
-                } else {
-                    // only expects error during scanning atm.
-                    launch { sideEffect.emit(BluetoothSideEffect.Error(Exception("Unexpected action"))) }
                     oldState
                 }
             }
@@ -92,15 +106,14 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
         }
     }
 
-    private suspend fun scanForBtleDevice() {
+    private suspend fun scanForBtleDevice(deviceName: String) {
         try {
-            val foundDevice = bluetoothService.scanForDevice("Roberts Waage")
-            // TODO: connect to device
+            val connectFlow = bluetoothService.scanForDevice(deviceName)
             delay(1000)
-            dispatch(BluetoothAction.DeviceConnected(foundDevice))
-            dispatch(BluetoothAction.StopScanning)
+            val device = connectFlow.single()
+            dispatch(BluetoothAction.DeviceConnected(device))
         } catch (e: Exception) {
-            dispatch(BluetoothAction.Error(e))
+            dispatch(BluetoothAction.StopScanning(e))
         }
     }
 }

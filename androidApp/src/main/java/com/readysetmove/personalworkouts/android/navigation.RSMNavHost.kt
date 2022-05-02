@@ -60,22 +60,6 @@ fun RSMNavHost(navController: NavHostController) {
             context.unregisterReceiver(broadcast)
         }
     }
-//    if (scanningInProgress) {
-//        LaunchedEffect(true) {
-//            if (ActivityCompat.checkSelfPermission(
-//                    context,
-//                    Manifest.permission.BLUETOOTH_SCAN
-//                ) == PackageManager.PERMISSION_GRANTED
-//            ) {
-//                if (bluetoothAdapter.isDiscovering) {
-//                    bluetoothAdapter.cancelDiscovery()
-//                }
-//                bluetoothAdapter.startDiscovery()
-//            }
-//            delay(1000)
-//            devices = listOf(Device(name = "Scanned 1"), Device(name = "Scanned 2"))
-//        }
-//    }
 
     val btPermissions = rememberMultiplePermissionsState(
         if (Build.VERSION.SDK_INT >= 31) listOf(
@@ -127,7 +111,8 @@ fun RSMNavHost(navController: NavHostController) {
                     Exercise(name = "Front Press", comment = "Press Cmt"),
                     Exercise(name = "Deadlift", comment = "DL Cmt")),
                     comment = "Wkt Cmt"),
-                onStartWorkout = { navController.navigate(WorkoutScreen.ROUTE) }
+                onStartWorkout = { navController.navigate(DeviceManagementOverviewScreen.ROUTE) }
+//                onStartWorkout = { navController.navigate(WorkoutScreen.ROUTE) }
             )
         }
         composable(route = SettingsScreen.ROUTE) {
@@ -137,7 +122,7 @@ fun RSMNavHost(navController: NavHostController) {
             WorkoutScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {
-            DeviceManagementOverviewScreen()
+            DeviceManagementOverviewScreen(onNavigateBack = { navController.navigate(WorkoutOverviewScreen.ROUTE) })
         }
     }
 }

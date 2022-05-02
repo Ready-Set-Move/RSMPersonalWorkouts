@@ -7,10 +7,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -25,6 +24,8 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.bluetooth.Device
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import org.koin.androidx.compose.get
 
 
@@ -33,19 +34,25 @@ object DeviceManagementOverviewScreen {
 }
 
 @Composable
-fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
+fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
     DisposableEffect(true) {
         store.dispatch(BluetoothAction.ScanAndConnect)
-        onDispose { store.dispatch(BluetoothAction.StopScanning) }
+        onDispose { store.dispatch(BluetoothAction.StopScanning()) }
     }
     val state = store.observeState().collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = title) },
-                Modifier.semantics { contentDescription = title }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.navigation__back))
+                    }
+                },
+                modifier = Modifier.semantics { contentDescription = title }
             )
         },
     ) { innerPadding ->
@@ -77,11 +84,9 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get()) {
 fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
         DeviceManagementOverviewScreen(store = BluetoothStore(object : BluetoothService {
-            override suspend fun scanForDevice(deviceName: String): Device {
-                return Device(deviceName)
+            override fun scanForDevice(deviceName: String): Flow<Device> {
+                return flow { Device(deviceName, "Dev0") }
             }
-
-            override fun stopScan() {}
-        }))
+        })) {}
     }
 }

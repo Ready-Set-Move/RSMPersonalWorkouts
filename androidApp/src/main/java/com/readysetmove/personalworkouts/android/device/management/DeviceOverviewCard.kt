@@ -36,7 +36,7 @@ fun DeviceOverviewCard(device: Device) {
 fun PreviewDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(Device(name = "Your Device"))
+            DeviceOverviewCard(Device(name = "Your Device", address = "Dev0"))
         }
     }
 }
@@ -52,7 +52,7 @@ fun PreviewDeviceOverviewCard() {
 fun PreviewSelectedDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(Device(name = "Your Device"))
+            DeviceOverviewCard(Device(name = "Your Device", address = "Dev0"))
         }
     }
 }

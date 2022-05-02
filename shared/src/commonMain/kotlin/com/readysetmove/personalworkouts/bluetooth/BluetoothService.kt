@@ -1,10 +1,13 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import kotlinx.coroutines.flow.Flow
+
 interface BluetoothService {
 
-    class ScanFailedException(message: String) : Throwable(message)
+    sealed class BluetoothException(message: String): Throwable(message) {
+        class ScanFailedException(message: String) : BluetoothException(message)
+        class ScanInProgressException(message: String) : BluetoothException(message)
+    }
 
-    suspend fun scanForDevice(deviceName: String): Device
-
-    fun stopScan()
+    fun scanForDevice(deviceName: String): Flow<Device>
 }
