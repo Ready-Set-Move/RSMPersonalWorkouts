@@ -6,6 +6,8 @@ interface BluetoothService {
 
     sealed class BluetoothException(message: String): Throwable(message) {
         class ScanFailedException(message: String) : BluetoothException(message)
+        class BluetoothPermissionNotGrantedException(message: String) : BluetoothException(message)
+        class BluetoothConnectPermissionNotGrantedException(message: String) : BluetoothException(message)
         class ScanInProgressException(message: String) : BluetoothException(message)
     }
 

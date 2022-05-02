@@ -1,6 +1,5 @@
 package com.readysetmove.personalworkouts.android
 
-import android.Manifest
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -8,7 +7,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.Text
@@ -25,13 +23,15 @@ import com.readysetmove.personalworkouts.android.permissions.GrantPermissionsScr
 import com.readysetmove.personalworkouts.android.settings.SettingsScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
+import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
     val bluetoothAdapter: BluetoothAdapter by remember {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mutableStateOf(bluetoothManager.adapter)
     }
     var btEnabled by rememberSaveable {
@@ -61,30 +61,18 @@ fun RSMNavHost(navController: NavHostController) {
         }
     }
 
-    val btPermissions = rememberMultiplePermissionsState(
-        if (Build.VERSION.SDK_INT >= 31) listOf(
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        ) else listOf(
-            Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
-    )
+    val btPermissions =
+        rememberMultiplePermissionsState(AndroidBluetoothService.REQUIRED_PERMISSIONS)
 
     if (!btPermissions.allPermissionsGranted) {
         GrantPermissionsScreen(btPermissions = btPermissions)
         return
     }
 
-    val requestActivateBTLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
-        btEnabled = result.resultCode == Activity.RESULT_OK
-    }
+    val requestActivateBTLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
+            btEnabled = result.resultCode == Activity.RESULT_OK
+        }
 
     if (!btEnabled) {
         LaunchedEffect(btEnabled) {
@@ -122,7 +110,9 @@ fun RSMNavHost(navController: NavHostController) {
             WorkoutScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {
-            DeviceManagementOverviewScreen(onNavigateBack = { navController.navigate(WorkoutOverviewScreen.ROUTE) })
+            DeviceManagementOverviewScreen(onNavigateBack = {
+                navController.navigate(WorkoutOverviewScreen.ROUTE)
+            })
         }
     }
 }
