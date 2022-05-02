@@ -1,9 +1,8 @@
-package com.readysetmove.personalworkouts.android.components
+package com.readysetmove.personalworkouts.android.workout.overview
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Card
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -21,9 +20,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.Exercise
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.Workout
+import com.readysetmove.personalworkouts.android.components.ExpandableContent
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun WorkoutOverviewCard(title: String, workout: Workout) {
     var expanded by rememberSaveable {

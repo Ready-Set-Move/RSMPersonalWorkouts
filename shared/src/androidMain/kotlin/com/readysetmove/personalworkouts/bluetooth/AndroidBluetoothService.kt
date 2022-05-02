@@ -19,10 +19,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
-    private val bleScanner by lazy {
+    private val bleAdapter by lazy {
         val bluetoothManager =
             androidContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothManager.adapter.bluetoothLeScanner
+        bluetoothManager.adapter
     }
     private val scanSettings = ScanSettings.Builder()
         .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
@@ -32,7 +32,14 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 
     private var scanInProgress: Boolean = false
 
+    fun getBluetoothEnabled(): Boolean {
+        return bleAdapter.isEnabled
+    }
+
     override fun scanForDevice(deviceName: String): Flow<Device> {
+        if (!bleAdapter.isEnabled) {
+            throw BluetoothDisabledException("Bluetooth needs to be enabled to start scanning")
+        }
         if (scanInProgress) {
             throw ScanInProgressException(
                 "Do not start multiple scans. Cancel running attempt first.")
@@ -64,11 +71,11 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
             if (androidContext.checkSelfPermission(Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
                 throw BluetoothPermissionNotGrantedException("BLUETOOTH not granted")
             }
-            bleScanner.startScan(filters, scanSettings, scanCallback)
+            bleAdapter.bluetoothLeScanner.startScan(filters, scanSettings, scanCallback)
 
             awaitClose {
                 Log.d("scanForDevice", "Stopping BLE scanner")
-                bleScanner.stopScan(scanCallback)
+                bleAdapter.bluetoothLeScanner.stopScan(scanCallback)
                 scanInProgress = false
             }
         }

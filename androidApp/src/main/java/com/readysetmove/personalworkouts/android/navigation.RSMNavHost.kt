@@ -9,14 +9,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.readysetmove.personalworkouts.android.device.management.DeviceManagementOverviewScreen
 import com.readysetmove.personalworkouts.android.permissions.GrantPermissionsScreen
@@ -24,35 +21,25 @@ import com.readysetmove.personalworkouts.android.settings.SettingsScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
+import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
+import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import org.koin.androidx.compose.inject
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
+    val btStore: BluetoothStore by inject()
+    val state = btStore.observeState().collectAsState()
+
     val bluetoothAdapter: BluetoothAdapter by remember {
         val bluetoothManager =
             context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mutableStateOf(bluetoothManager.adapter)
     }
-    var btEnabled by rememberSaveable {
-        mutableStateOf(bluetoothAdapter.isEnabled)
-    }
     DisposableEffect(context) {
         val broadcast = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                btEnabled = bluetoothAdapter.isEnabled
-            }
-        }
-        context.registerReceiver(broadcast, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
-        onDispose {
-            context.unregisterReceiver(broadcast)
-        }
-    }
-
-    DisposableEffect(context) {
-        val broadcast = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                btEnabled = bluetoothAdapter.isEnabled
+                btStore.dispatch(BluetoothAction.SetBluetoothEnabled(bluetoothAdapter.isEnabled))
             }
         }
         context.registerReceiver(broadcast, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED))
@@ -71,16 +58,14 @@ fun RSMNavHost(navController: NavHostController) {
 
     val requestActivateBTLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) { result ->
-            btEnabled = result.resultCode == Activity.RESULT_OK
+            btStore.dispatch(BluetoothAction.SetBluetoothEnabled(result.resultCode == Activity.RESULT_OK))
         }
 
-    if (!btEnabled) {
-        LaunchedEffect(btEnabled) {
+    if (!state.value.bluetoothEnabled) {
+        LaunchedEffect(state.value.bluetoothEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestActivateBTLauncher.launch(enableBtIntent)
         }
-        Text("BT not enabled")
-        return
     }
 
     NavHost(

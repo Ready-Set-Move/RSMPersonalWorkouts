@@ -1,13 +1,18 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.BluetoothDisabledException
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 data class BluetoothState(
+    val bluetoothEnabled: Boolean,
     val scanning: Boolean,
     val activeDevice: Device?,
     val deviceName: String?,
@@ -15,8 +20,9 @@ data class BluetoothState(
 
 sealed class BluetoothAction : Action {
     data class SetDeviceName(val name: String?) : BluetoothAction()
+    data class SetBluetoothEnabled(val enabled: Boolean) : BluetoothAction()
     object ScanAndConnect : BluetoothAction()
-    data class StopScanning(val error: Exception? = null) : BluetoothAction()
+    object StopScanning : BluetoothAction()
     data class DeviceConnected(val device: Device) : BluetoothAction()
 }
 
@@ -25,12 +31,12 @@ sealed class BluetoothSideEffect : Effect {
     data class Error(val error: Exception) : BluetoothSideEffect()
 }
 
-class BluetoothStore(private val bluetoothService: BluetoothService) :
+class BluetoothStore(private val bluetoothService: BluetoothService, initialState: BluetoothState) :
     Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
     CoroutineScope by CoroutineScope(Dispatchers.Main) {
 
     private val state = MutableStateFlow(
-        BluetoothState(scanning = false, activeDevice = null, deviceName = "Roberts Waage")
+        initialState.copy()
     )
     private val sideEffect = MutableSharedFlow<BluetoothSideEffect>()
     private var connectJob: Job? = null
@@ -51,7 +57,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
                             scanForBtleDevice(deviceName)
                         }
                     } else {
-                        dispatch(BluetoothAction.StopScanning())
+                        dispatch(BluetoothAction.StopScanning)
                     }
                 } else if (!it.scanning && connectJob?.isActive == true) {
                     connectJob?.cancel()
@@ -64,12 +70,26 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
         val oldState = state.value
 
         val newState = when (action) {
+            is BluetoothAction.SetBluetoothEnabled -> {
+                if (action.enabled != oldState.bluetoothEnabled) {
+                    oldState.copy(
+                        bluetoothEnabled = action.enabled,
+                        // scanning is either off due to disabled or gets turned off now
+                        scanning = false,
+                    )
+                } else {
+                    oldState
+                }
+            }
             is BluetoothAction.SetDeviceName -> {
-                dispatch(BluetoothAction.StopScanning())
+                dispatch(BluetoothAction.StopScanning)
                 oldState.copy(deviceName = action.name)
             }
             is BluetoothAction.ScanAndConnect -> {
                 when {
+                    !oldState.bluetoothEnabled -> {
+                        oldState
+                    }
                     oldState.deviceName == null -> {
                         launch {
                             sideEffect.emit(BluetoothSideEffect.Error(Exception("Unexpected action: can't scan for device without name")))
@@ -84,9 +104,6 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
             }
             is BluetoothAction.StopScanning -> {
                 if (oldState.scanning) {
-                    if (action.error != null) {
-                        launch { sideEffect.emit(BluetoothSideEffect.Error(action.error)) }
-                    }
                     oldState.copy(scanning = false)
                 } else {
                     oldState
@@ -109,11 +126,15 @@ class BluetoothStore(private val bluetoothService: BluetoothService) :
     private suspend fun scanForBtleDevice(deviceName: String) {
         try {
             val connectFlow = bluetoothService.scanForDevice(deviceName)
-            delay(1000)
             val device = connectFlow.single()
             dispatch(BluetoothAction.DeviceConnected(device))
         } catch (e: Exception) {
-            dispatch(BluetoothAction.StopScanning(e))
+            dispatch(BluetoothAction.StopScanning)
+            when (e) {
+                is BluetoothDisabledException ->
+                    dispatch(BluetoothAction.SetBluetoothEnabled(false))
+                else -> sideEffect.emit(BluetoothSideEffect.Error(e))
+            }
         }
     }
 }

@@ -17,7 +17,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.Exercise
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.Workout
-import com.readysetmove.personalworkouts.android.components.WorkoutOverviewCard
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
 
@@ -66,7 +65,7 @@ fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
     widthDp = 1024
 )
 @Composable
-fun PreviewWorkoutOverviewCard() {
+fun PreviewWorkoutOverviewScreen() {
     AppTheme {
         WorkoutOverviewScreen(
             Workout(exercises = listOf(Exercise(name = "Rows", "Rows Cmt"),

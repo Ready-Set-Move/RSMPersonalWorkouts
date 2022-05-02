@@ -5,6 +5,15 @@ plugins {
 
 val composeVersion = "1.1.1"
 
+kotlin {
+    sourceSets {
+        all {
+            languageSettings.optIn("com.google.accompanist.permissions.ExperimentalPermissionsApi")
+            languageSettings.optIn("androidx.compose.material.ExperimentalMaterialApi")
+        }
+    }
+}
+
 android {
     compileSdk = 32
     defaultConfig {
@@ -35,7 +44,6 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-
     dependencies {
         implementation(project(":shared"))
         implementation("androidx.compose.ui:ui:$composeVersion")

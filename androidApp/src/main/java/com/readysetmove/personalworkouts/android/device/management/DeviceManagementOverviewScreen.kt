@@ -20,10 +20,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
-import com.readysetmove.personalworkouts.bluetooth.BluetoothService
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.bluetooth.Device
+import com.readysetmove.personalworkouts.bluetooth.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.koin.androidx.compose.get
@@ -37,11 +34,13 @@ object DeviceManagementOverviewScreen {
 fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
-    DisposableEffect(true) {
-        store.dispatch(BluetoothAction.ScanAndConnect)
-        onDispose { store.dispatch(BluetoothAction.StopScanning()) }
-    }
     val state = store.observeState().collectAsState()
+    DisposableEffect(state.value.bluetoothEnabled) {
+        if (state.value.bluetoothEnabled) {
+            store.dispatch(BluetoothAction.ScanAndConnect)
+        }
+        onDispose { store.dispatch(BluetoothAction.StopScanning) }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -83,10 +82,18 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
 @Composable
 fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
-        DeviceManagementOverviewScreen(store = BluetoothStore(object : BluetoothService {
-            override fun scanForDevice(deviceName: String): Flow<Device> {
-                return flow { Device(deviceName, "Dev0") }
-            }
-        })) {}
+        DeviceManagementOverviewScreen(
+            store = BluetoothStore(
+                bluetoothService = object : BluetoothService {
+                    override fun scanForDevice(deviceName: String): Flow<Device> {
+                        return flow { Device(deviceName, "Dev0") }
+                    }
+                },
+                initialState = BluetoothState(bluetoothEnabled = false,
+                    scanning = false,
+                    activeDevice = null,
+                    deviceName = null)
+            )
+        ) {}
     }
 }
