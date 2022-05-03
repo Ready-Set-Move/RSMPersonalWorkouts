@@ -23,7 +23,9 @@ import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
+import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
 
 @Composable
@@ -68,9 +70,12 @@ fun RSMNavHost(navController: NavHostController) {
             requestActivateBTLauncher.launch(enableBtIntent)
         }
     }
-    LaunchedEffect(state.value.activeDevice) {
-        if (state.value.activeDevice == null) {
-            Toast.makeText(context, "Device Disconnected", Toast.LENGTH_LONG)
+    val disConnectedSideEffect =
+        btStore.observeSideEffect().filterIsInstance<BluetoothSideEffect.DeviceDisConnected>()
+            .collectAsState(null)
+    LaunchedEffect(disConnectedSideEffect.value) {
+        if (disConnectedSideEffect.value != null) {
+            Toast.makeText(context, "Device Disconnected", Toast.LENGTH_LONG).show()
         }
     }
 
