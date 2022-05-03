@@ -21,10 +21,10 @@ class App : Application() {
             val bluetoothService = AndroidBluetoothService(androidContext())
             BluetoothStore(
                 bluetoothService = bluetoothService,
-                initialState = BluetoothState(scanning = false,
-                    activeDevice = null,
+                initialState = BluetoothState(
                     deviceName = "Roberts Waage",
-                    bluetoothEnabled = bluetoothService.getBluetoothEnabled()))
+                    bluetoothEnabled = bluetoothService.getBluetoothEnabled())
+            )
         }
     }
 

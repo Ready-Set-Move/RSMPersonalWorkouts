@@ -1,9 +1,7 @@
 package com.readysetmove.personalworkouts.android.device.management
 
 import android.content.res.Configuration
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
 @Composable
-fun DeviceOverviewCard(deviceName: String) {
+fun DeviceOverviewCard(deviceName: String, currentWeight: Float) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
@@ -20,6 +18,8 @@ fun DeviceOverviewCard(deviceName: String) {
         )
         {
             Text(text = deviceName, style = AppTheme.typography.h1)
+            Spacer(Modifier.height(AppTheme.spacings.md))
+            Text(text = "${"%.2f".format(currentWeight)} kg", style = AppTheme.typography.h2)
         }
     }
 }
@@ -35,23 +35,7 @@ fun DeviceOverviewCard(deviceName: String) {
 fun PreviewDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard("Your Device")
-        }
-    }
-}
-
-@Preview(name = "Light Mode Selected", widthDp = 1024)
-@Preview(
-    name = "Dark Mode Selected",
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    widthDp = 540
-)
-@Composable
-fun PreviewSelectedDeviceOverviewCard() {
-    AppTheme {
-        androidx.compose.material.Surface {
-            DeviceOverviewCard("Your Device")
+            DeviceOverviewCard("Your Device", 1337.0f)
         }
     }
 }

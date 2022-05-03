@@ -62,8 +62,7 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
             .padding(AppTheme.spacings.md)
         ) {
             state.value.activeDevice?.let {
-                DeviceOverviewCard(it.deviceName)
-                Spacer(modifier = Modifier.height(AppTheme.spacings.sm))
+                DeviceOverviewCard(deviceName = it, currentWeight = state.value.weight)
             }
             if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))
@@ -90,10 +89,7 @@ fun PreviewDeviceManagementOverviewScreen() {
         DeviceManagementOverviewScreen(
             store = BluetoothStore(
                 bluetoothService = PreviewBluetoothService,
-                initialState = BluetoothState(bluetoothEnabled = false,
-                    scanning = false,
-                    activeDevice = null,
-                    deviceName = null)
+                initialState = BluetoothState(bluetoothEnabled = true)
             )
         ) {}
     }

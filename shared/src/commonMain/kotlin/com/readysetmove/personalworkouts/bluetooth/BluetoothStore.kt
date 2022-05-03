@@ -16,9 +16,10 @@ import kotlinx.coroutines.launch
 
 data class BluetoothState(
     val bluetoothEnabled: Boolean,
-    val scanning: Boolean,
-    val activeDevice: DeviceManager?,
-    val deviceName: String?,
+    val scanning: Boolean = false,
+    val activeDevice: String? = null,
+    val deviceName: String? = null,
+    val weight: Float = 0.0f,
 ) : State
 
 sealed class BluetoothAction : Action {
@@ -26,7 +27,7 @@ sealed class BluetoothAction : Action {
     data class SetBluetoothEnabled(val enabled: Boolean) : BluetoothAction()
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
-    data class DeviceConnected(val device: DeviceManager) : BluetoothAction()
+    data class DeviceConnected(val deviceName: String) : BluetoothAction()
     object DeviceDisConnected : BluetoothAction()
 }
 
@@ -48,28 +49,6 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
 
     override fun observeState(): StateFlow<BluetoothState> = state
     override fun observeSideEffect(): Flow<BluetoothSideEffect> = sideEffect
-
-//    init {
-//        launch {
-//            observeState().collect {
-//                val connectJobActive = connectJob?.isActive ?: false
-//                if (it.scanning && !connectJobActive) {
-//                    if (connectJobActive) connectJob?.cancel()
-//
-//                    val deviceName = state.value.deviceName
-//                    if (deviceName != null) {
-//                        connectJob = launch {
-//                            scanForBtleDevice(deviceName)
-//                        }
-//                    } else {
-//                        dispatch(BluetoothAction.StopScanning)
-//                    }
-//                } else if (!it.scanning && connectJob?.isActive == true) {
-//                    connectJob?.cancel()
-//                }
-//            }
-//        }
-//    }
 
     override fun dispatch(action: BluetoothAction) {
         val oldState = state.value
@@ -125,15 +104,15 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                 }
             }
             is BluetoothAction.DeviceConnected -> {
-                if (oldState.activeDevice != action.device) {
-                    oldState.copy(activeDevice = action.device, scanning = false)
+                if (oldState.activeDevice != action.deviceName) {
+                    oldState.copy(activeDevice = action.deviceName, scanning = false)
                 } else {
                     oldState
                 }
             }
             is BluetoothAction.DeviceDisConnected -> {
                 if (oldState.activeDevice != null) {
-                    launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice.deviceName)) }
+                    launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice)) }
                     oldState.copy(activeDevice = null)
                 } else {
                     oldState
@@ -148,11 +127,14 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
 
     private suspend fun scanForBtleDevice(deviceName: String) {
         try {
-            bluetoothService.connectToDevice(deviceName).collect {
-                if (it != null) {
-                    dispatch(BluetoothAction.DeviceConnected(it))
-                } else {
-                    dispatch(BluetoothAction.DeviceDisConnected)
+            bluetoothService.connectToDevice(deviceName).collect { action ->
+                when (action) {
+                    is BluetoothService.BluetoothDeviceActions.Connected -> dispatch(BluetoothAction.DeviceConnected(
+                        action.deviceName))
+                    is BluetoothService.BluetoothDeviceActions.WeightChanged -> state.value =
+                        state.value.copy(weight = action.weight)
+                    is BluetoothService.BluetoothDeviceActions.DisConnected -> dispatch(
+                        BluetoothAction.DeviceDisConnected)
                 }
             }
         } catch (e: Exception) {
