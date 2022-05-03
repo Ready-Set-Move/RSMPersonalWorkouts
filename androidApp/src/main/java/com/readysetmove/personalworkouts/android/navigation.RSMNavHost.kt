@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
@@ -65,6 +66,11 @@ fun RSMNavHost(navController: NavHostController) {
         LaunchedEffect(state.value.bluetoothEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestActivateBTLauncher.launch(enableBtIntent)
+        }
+    }
+    LaunchedEffect(state.value.activeDevice) {
+        if (state.value.activeDevice == null) {
+            Toast.makeText(context, "Device Disconnected", Toast.LENGTH_LONG)
         }
     }
 

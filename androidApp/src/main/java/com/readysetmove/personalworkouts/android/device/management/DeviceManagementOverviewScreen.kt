@@ -19,10 +19,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
+import com.readysetmove.personalworkouts.android.preview.PreviewBluetoothService
 import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.bluetooth.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
+import com.readysetmove.personalworkouts.bluetooth.BluetoothState
+import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import org.koin.androidx.compose.get
 
 
@@ -61,12 +62,16 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
             .padding(AppTheme.spacings.md)
         ) {
             state.value.activeDevice?.let {
-                DeviceOverviewCard(it)
+                DeviceOverviewCard(it.deviceName)
                 Spacer(modifier = Modifier.height(AppTheme.spacings.sm))
             }
             if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))
                 CircularProgressIndicator()
+            } else if (state.value.activeDevice == null) {
+                Button(onClick = { store.dispatch(BluetoothAction.ScanAndConnect) }) {
+                    Text(text = "Connect")
+                }
             }
         }
     }
@@ -84,11 +89,7 @@ fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
         DeviceManagementOverviewScreen(
             store = BluetoothStore(
-                bluetoothService = object : BluetoothService {
-                    override fun scanForDevice(deviceName: String): Flow<Device> {
-                        return flow { Device(deviceName, "Dev0") }
-                    }
-                },
+                bluetoothService = PreviewBluetoothService,
                 initialState = BluetoothState(bluetoothEnabled = false,
                     scanning = false,
                     activeDevice = null,

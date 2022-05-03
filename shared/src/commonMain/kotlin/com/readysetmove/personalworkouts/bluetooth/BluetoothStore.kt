@@ -8,13 +8,16 @@ import com.readysetmove.personalworkouts.state.Store
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class BluetoothState(
     val bluetoothEnabled: Boolean,
     val scanning: Boolean,
-    val activeDevice: Device?,
+    val activeDevice: DeviceManager?,
     val deviceName: String?,
 ) : State
 
@@ -23,12 +26,14 @@ sealed class BluetoothAction : Action {
     data class SetBluetoothEnabled(val enabled: Boolean) : BluetoothAction()
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
-    data class DeviceConnected(val device: Device) : BluetoothAction()
+    data class DeviceConnected(val device: DeviceManager) : BluetoothAction()
+    object DeviceDisConnected : BluetoothAction()
 }
 
 
 sealed class BluetoothSideEffect : Effect {
     data class Error(val error: Exception) : BluetoothSideEffect()
+    data class DeviceDisConnected(val deviceName: String) : BluetoothSideEffect()
 }
 
 class BluetoothStore(private val bluetoothService: BluetoothService, initialState: BluetoothState) :
@@ -44,27 +49,27 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
     override fun observeState(): StateFlow<BluetoothState> = state
     override fun observeSideEffect(): Flow<BluetoothSideEffect> = sideEffect
 
-    init {
-        launch {
-            observeState().collect {
-                val connectJobActive = connectJob?.isActive ?: false
-                if (it.scanning && !connectJobActive) {
-                    if (connectJobActive) connectJob?.cancel()
-
-                    val deviceName = state.value.deviceName
-                    if (deviceName != null) {
-                        connectJob = launch {
-                            scanForBtleDevice(deviceName)
-                        }
-                    } else {
-                        dispatch(BluetoothAction.StopScanning)
-                    }
-                } else if (!it.scanning && connectJob?.isActive == true) {
-                    connectJob?.cancel()
-                }
-            }
-        }
-    }
+//    init {
+//        launch {
+//            observeState().collect {
+//                val connectJobActive = connectJob?.isActive ?: false
+//                if (it.scanning && !connectJobActive) {
+//                    if (connectJobActive) connectJob?.cancel()
+//
+//                    val deviceName = state.value.deviceName
+//                    if (deviceName != null) {
+//                        connectJob = launch {
+//                            scanForBtleDevice(deviceName)
+//                        }
+//                    } else {
+//                        dispatch(BluetoothAction.StopScanning)
+//                    }
+//                } else if (!it.scanning && connectJob?.isActive == true) {
+//                    connectJob?.cancel()
+//                }
+//            }
+//        }
+//    }
 
     override fun dispatch(action: BluetoothAction) {
         val oldState = state.value
@@ -72,6 +77,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
         val newState = when (action) {
             is BluetoothAction.SetBluetoothEnabled -> {
                 if (action.enabled != oldState.bluetoothEnabled) {
+                    connectJob?.cancel()
                     oldState.copy(
                         bluetoothEnabled = action.enabled,
                         // scanning is either off due to disabled or gets turned off now
@@ -82,12 +88,19 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                 }
             }
             is BluetoothAction.SetDeviceName -> {
-                dispatch(BluetoothAction.StopScanning)
-                oldState.copy(deviceName = action.name)
+                if (oldState.deviceName != action.name) {
+                    connectJob?.cancel()
+                    oldState.copy(deviceName = action.name)
+                } else {
+                    oldState
+                }
             }
             is BluetoothAction.ScanAndConnect -> {
                 when {
                     !oldState.bluetoothEnabled -> {
+                        oldState
+                    }
+                    oldState.activeDevice != null -> {
                         oldState
                     }
                     oldState.deviceName == null -> {
@@ -97,6 +110,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                         oldState
                     }
                     !oldState.scanning -> {
+                        connectJob = launch { scanForBtleDevice(oldState.deviceName) }
                         oldState.copy(scanning = true)
                     }
                     else -> oldState
@@ -104,6 +118,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
             }
             is BluetoothAction.StopScanning -> {
                 if (oldState.scanning) {
+                    connectJob?.cancel()
                     oldState.copy(scanning = false)
                 } else {
                     oldState
@@ -112,6 +127,14 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
             is BluetoothAction.DeviceConnected -> {
                 if (oldState.activeDevice != action.device) {
                     oldState.copy(activeDevice = action.device, scanning = false)
+                } else {
+                    oldState
+                }
+            }
+            is BluetoothAction.DeviceDisConnected -> {
+                if (oldState.activeDevice != null) {
+                    launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice.deviceName)) }
+                    oldState.copy(activeDevice = null)
                 } else {
                     oldState
                 }
@@ -125,9 +148,13 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
 
     private suspend fun scanForBtleDevice(deviceName: String) {
         try {
-            val connectFlow = bluetoothService.scanForDevice(deviceName)
-            val device = connectFlow.single()
-            dispatch(BluetoothAction.DeviceConnected(device))
+            bluetoothService.connectToDevice(deviceName).collect {
+                if (it != null) {
+                    dispatch(BluetoothAction.DeviceConnected(it))
+                } else {
+                    dispatch(BluetoothAction.DeviceDisConnected)
+                }
+            }
         } catch (e: Exception) {
             dispatch(BluetoothAction.StopScanning)
             when (e) {

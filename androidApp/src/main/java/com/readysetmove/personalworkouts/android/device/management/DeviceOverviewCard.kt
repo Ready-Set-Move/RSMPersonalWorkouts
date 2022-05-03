@@ -10,17 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.bluetooth.Device
 
 @Composable
-fun DeviceOverviewCard(device: Device) {
+fun DeviceOverviewCard(deviceName: String) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = AppTheme.spacings.md)
         )
         {
-            Text(text = device.name, style = AppTheme.typography.h1)
+            Text(text = deviceName, style = AppTheme.typography.h1)
         }
     }
 }
@@ -36,7 +35,7 @@ fun DeviceOverviewCard(device: Device) {
 fun PreviewDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(Device(name = "Your Device", address = "Dev0"))
+            DeviceOverviewCard("Your Device")
         }
     }
 }
@@ -52,7 +51,7 @@ fun PreviewDeviceOverviewCard() {
 fun PreviewSelectedDeviceOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            DeviceOverviewCard(Device(name = "Your Device", address = "Dev0"))
+            DeviceOverviewCard("Your Device")
         }
     }
 }
