@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,11 +53,12 @@ fun RSMNavHost(navController: NavHostController) {
     }
 
     val btPermissions =
-        rememberMultiplePermissionsState(AndroidBluetoothService.REQUIRED_PERMISSIONS)
+        rememberMultiplePermissionsState(AndroidBluetoothService.REQUIRED_PERMISSIONS) {
+            Log.d("@@@", it.toString())
+        }
 
-    if (!btPermissions.allPermissionsGranted) {
-        GrantPermissionsScreen(btPermissions = btPermissions)
-        return
+    LaunchedEffect(btPermissions.allPermissionsGranted) {
+        btStore.dispatch(BluetoothAction.SetBluetoothPermissionsGranted(btPermissions.allPermissionsGranted))
     }
 
     val requestActivateBTLauncher =
@@ -77,6 +79,11 @@ fun RSMNavHost(navController: NavHostController) {
         if (disConnectedSideEffect.value != null) {
             Toast.makeText(context, "Device Disconnected", Toast.LENGTH_LONG).show()
         }
+    }
+
+    if (!state.value.bluetoothPermissionsGranted) {
+        GrantPermissionsScreen(btPermissions = btPermissions)
+        return
     }
 
     NavHost(

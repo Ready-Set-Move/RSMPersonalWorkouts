@@ -1,21 +1,20 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.BluetoothConnectPermissionNotGrantedException
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.BluetoothDisabledException
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 data class BluetoothState(
     val bluetoothEnabled: Boolean,
+    val bluetoothPermissionsGranted: Boolean = false,
     val scanning: Boolean = false,
     val activeDevice: String? = null,
     val deviceName: String? = null,
@@ -25,6 +24,7 @@ data class BluetoothState(
 sealed class BluetoothAction : Action {
     data class SetDeviceName(val name: String?) : BluetoothAction()
     data class SetBluetoothEnabled(val enabled: Boolean) : BluetoothAction()
+    data class SetBluetoothPermissionsGranted(val granted: Boolean) : BluetoothAction()
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
     data class DeviceConnected(val deviceName: String) : BluetoothAction()
@@ -66,6 +66,18 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                     oldState
                 }
             }
+            is BluetoothAction.SetBluetoothPermissionsGranted -> {
+                if (action.granted != oldState.bluetoothPermissionsGranted) {
+                    connectJob?.cancel()
+                    oldState.copy(
+                        bluetoothPermissionsGranted = action.granted,
+                        // scanning is either off due to no permissions or gets turned off now
+                        scanning = false,
+                    )
+                } else {
+                    oldState
+                }
+            }
             is BluetoothAction.SetDeviceName -> {
                 if (oldState.deviceName != action.name) {
                     connectJob?.cancel()
@@ -76,7 +88,8 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
             }
             is BluetoothAction.ScanAndConnect -> {
                 when {
-                    !oldState.bluetoothEnabled -> {
+                    !oldState.bluetoothEnabled || !oldState.bluetoothPermissionsGranted -> {
+                        // TODO: side effect to inform consumer
                         oldState
                     }
                     oldState.activeDevice != null -> {
@@ -139,9 +152,13 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
             }
         } catch (e: Exception) {
             dispatch(BluetoothAction.StopScanning)
-            when (e) {
+            when (if (e is CancellationException) e.cause else e) {
                 is BluetoothDisabledException ->
                     dispatch(BluetoothAction.SetBluetoothEnabled(false))
+                is BluetoothConnectPermissionNotGrantedException ->
+                    dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
+                is BluetoothService.BluetoothException.ConnectFailedException ->
+                    dispatch(BluetoothAction.DeviceDisConnected)
                 else -> sideEffect.emit(BluetoothSideEffect.Error(e))
             }
         }

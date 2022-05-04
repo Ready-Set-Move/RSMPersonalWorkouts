@@ -41,7 +41,8 @@ private fun BluetoothGatt.printGattTable() {
     }
 }
 
-val cccdUuid = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+private val cccdUuid: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
     private val bleAdapter by lazy {
@@ -60,11 +61,6 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
     }
 
     override fun connectToDevice(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
-        if (androidContext.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            throw BluetoothConnectPermissionNotGrantedException("BLUETOOTH_CONNECT not granted")
-        }
         if (!getBluetoothEnabled()) {
             throw BluetoothDisabledException("Bluetooth needs to be enabled to start scanning")
         }
@@ -75,7 +71,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 
             with(device) {
                 val connectionStateChangedCallback = object : BluetoothGattCallback() {
-                    var reconnectAttemptsLeft = 10
+                    var reconnectAttemptsLeft = MAX_RECONNECT_ATTEMPTS
                     override fun onConnectionStateChange(
                         gatt: BluetoothGatt?,
                         status: Int,
@@ -84,7 +80,8 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                         val logTag = "$methodTag.onConnectionStateChange"
                         Log.d(logTag, "state changed: status=$status newState=$newState")
                         if (gatt == null) return
-                        if (androidContext.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                        if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                                Manifest.permission.BLUETOOTH_CONNECT)
                             != PackageManager.PERMISSION_GRANTED
                         ) {
                             cancel(CancellationException(
@@ -98,10 +95,12 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                             return
                         }
                         if (newState == STATE_CONNECTED) {
+                            reconnectAttemptsLeft = MAX_RECONNECT_ATTEMPTS
                             Log.d(logTag, "device connected: $deviceName@$address")
                             gatt.discoverServices()
                         }
                         if (newState == STATE_DISCONNECTED) {
+                            // TODO: should we try auto reconnect here?
                             Log.d(logTag, "device disconnected: $deviceName@$address")
                             trySendBlocking(DisConnected)
                             gatt.close()
@@ -151,7 +150,8 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     }
 
                     private fun enableTractionNotifications(gatt: BluetoothGatt, logTag: String?) {
-                        if (androidContext.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                        if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                                Manifest.permission.BLUETOOTH_CONNECT)
                             != PackageManager.PERMISSION_GRANTED
                         ) {
                             cancel(CancellationException(
@@ -183,8 +183,10 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     }
 
                     private fun reconnect(status: Int, gatt: BluetoothGatt, logTag: String) {
-                        Log.d(logTag, "status was failed: $status")
-                        if (androidContext.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                        val reconnectMethodTag = "reconnect"
+                        Log.d("$logTag.$reconnectMethodTag", "status was failed: $status.")
+                        if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                                Manifest.permission.BLUETOOTH_CONNECT)
                             != PackageManager.PERMISSION_GRANTED
                         ) {
                             cancel(CancellationException(
@@ -196,19 +198,22 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                         gatt.close()
 
                         if (status == GATT_INSUFFICIENT_ENCRYPTION || status == GATT_INSUFFICIENT_AUTHENTICATION) {
-                            Log.d(logTag,
+                            Log.d("$logTag.$reconnectMethodTag",
                                 "status failed with insufficient encryption or authentication. Trying to bond before attempting connection.")
                             // TODO: bond
                         }
 
                         if (reconnectAttemptsLeft == 0) {
+                            Log.d("$logTag.$reconnectMethodTag",
+                                "Reconnect failed to many times. Stop retry.")
                             cancel(CancellationException(
                                 "Too many gatt connection attempts failed",
                                 ConnectFailedException("Device: $address"))
                             )
                             return
                         }
-                        // try to reconnect
+                        // TODO: send action to notify user
+                        Log.d("$logTag.$methodTag", "Trying to reconnect.")
                         reconnectAttemptsLeft--
                         connectGatt(androidContext,
                             false,
@@ -217,11 +222,12 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     }
                 }
                 Log.d("$methodTag.connectionFlow", "Connecting to $address")
-                connectGatt(androidContext,
+                val gatt = connectGatt(androidContext,
                     false,
                     connectionStateChangedCallback,
                     BluetoothDevice.TRANSPORT_LE)
                 awaitClose {
+                    gatt.disconnect()
                     Log.d("$methodTag.connectionFlow", "Flow closed")
                 }
             }
