@@ -62,7 +62,9 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
             .padding(AppTheme.spacings.md)
         ) {
             state.value.activeDevice?.let {
-                DeviceOverviewCard(deviceName = it, currentWeight = state.value.weight)
+                DeviceOverviewCard(deviceName = it, currentWeight = state.value.weight) {
+                    store.dispatch(BluetoothAction.SetTara)
+                }
             }
             if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))

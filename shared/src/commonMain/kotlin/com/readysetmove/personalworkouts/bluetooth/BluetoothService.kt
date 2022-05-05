@@ -1,5 +1,6 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
 interface BluetoothService {
@@ -17,7 +18,14 @@ interface BluetoothService {
         class BluetoothPermissionNotGrantedException(message: String) : BluetoothException(message)
         class BluetoothConnectPermissionNotGrantedException(message: String) :
             BluetoothException(message)
+
+        class NotConnectedException(message: String) : BluetoothException(message)
     }
 
-    fun connectToDevice(deviceName: String): Flow<BluetoothDeviceActions>
+    fun connectToDevice(
+        deviceName: String,
+        externalScope: CoroutineScope,
+    ): Flow<BluetoothDeviceActions>
+
+    fun setTara()
 }

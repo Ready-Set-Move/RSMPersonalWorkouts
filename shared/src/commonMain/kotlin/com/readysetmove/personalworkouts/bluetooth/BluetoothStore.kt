@@ -29,6 +29,7 @@ sealed class BluetoothAction : Action {
     object StopScanning : BluetoothAction()
     data class DeviceConnected(val deviceName: String) : BluetoothAction()
     object DeviceDisConnected : BluetoothAction()
+    object SetTara : BluetoothAction()
 }
 
 
@@ -92,7 +93,8 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                         // TODO: side effect to inform consumer
                         oldState
                     }
-                    oldState.activeDevice != null -> {
+                    oldState.activeDevice != null || connectJob != null -> {
+                        // in this case we already started a connection
                         oldState
                     }
                     oldState.deviceName == null -> {
@@ -102,7 +104,13 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                         oldState
                     }
                     !oldState.scanning -> {
-                        connectJob = launch { scanForBtleDevice(oldState.deviceName) }
+                        val zeeConnectJob = launch {
+                            scanForBtleDevice(oldState.deviceName)
+                        }
+                        zeeConnectJob.invokeOnCompletion {
+                            connectJob = null
+                        }
+                        connectJob = zeeConnectJob
                         oldState.copy(scanning = true)
                     }
                     else -> oldState
@@ -131,6 +139,10 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                     oldState
                 }
             }
+            is BluetoothAction.SetTara -> {
+                bluetoothService.setTara()
+                oldState
+            }
         }
 
         if (newState != oldState) {
@@ -140,7 +152,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
 
     private suspend fun scanForBtleDevice(deviceName: String) {
         try {
-            bluetoothService.connectToDevice(deviceName).collect { action ->
+            bluetoothService.connectToDevice(deviceName, this).collect { action ->
                 when (action) {
                     is BluetoothService.BluetoothDeviceActions.Connected -> dispatch(BluetoothAction.DeviceConnected(
                         action.deviceName))

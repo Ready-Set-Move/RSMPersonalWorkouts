@@ -15,12 +15,11 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDev
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.DisConnected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.single
+import kotlinx.coroutines.flow.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -42,6 +41,11 @@ private fun BluetoothGatt.printGattTable() {
 }
 
 private val cccdUuid: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+private val serviceUuid = UUID.fromString("87811010-b3ba-4255-95cc-838c34d33583")
+private val sendUuid = UUID.fromString("0000aa01-0000-1000-8000-00805f9b34fb")
+private val tractionUuid = UUID.fromString("0000aa02-0000-1000-8000-00805f9b34fb")
+private val dataUuid = UUID.fromString("0000aa03-0000-1000-8000-00805f9b34fb")
+
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
@@ -60,12 +64,53 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         return bleAdapter.isEnabled
     }
 
-    override fun connectToDevice(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
+    private var sharedFlow: SharedFlow<BluetoothService.BluetoothDeviceActions>? = null
+    private var gattInUse: BluetoothGatt? = null
+
+    override fun connectToDevice(
+        deviceName: String,
+        externalScope: CoroutineScope,
+    ): SharedFlow<BluetoothService.BluetoothDeviceActions> {
         if (!getBluetoothEnabled()) {
             throw BluetoothDisabledException("Bluetooth needs to be enabled to start scanning")
         }
 
-        val methodTag = "connectToDevice"
+        // did we already start the flow? then return it for subscribers
+        var zeeFlow = sharedFlow
+        if (zeeFlow != null) return zeeFlow
+
+        //... otherwise start it to scan, connect and launch the monster callback to listen to the BTLE device
+        zeeFlow = startConnectCallback(deviceName).shareIn(externalScope,
+            SharingStarted.WhileSubscribed())
+        sharedFlow = zeeFlow
+        return zeeFlow
+    }
+
+    override fun setTara() {
+        gattInUse?.let { gatt ->
+            val setTaraCharacteristic =
+                gatt.getService(serviceUuid)
+                    .getCharacteristic(dataUuid)
+            setTaraCharacteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            setTaraCharacteristic.value =
+                byteArrayOf(100,
+                    (1 shr 0).toByte(),
+                    (1 shr 8).toByte(),
+                    (1 shr 16).toByte(),
+                    (1 shr 24).toByte()
+                )
+            if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                    Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                throw BluetoothPermissionNotGrantedException("Could not set tara.")
+            }
+            gatt.writeCharacteristic(setTaraCharacteristic)
+        } ?: throw NotConnectedException("Could not set tara.")
+    }
+
+    private fun startConnectCallback(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
+        val methodTag = "startConnectCallback"
         return callbackFlow {
             val device = scanForDevice(deviceName).single()
 
@@ -161,8 +206,8 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                             return
                         }
                         val tractionCharacteristic =
-                            gatt.getService(UUID.fromString("87811010-b3ba-4255-95cc-838c34d33583"))
-                                .getCharacteristic(UUID.fromString("0000aa02-0000-1000-8000-00805f9b34fb"))
+                            gatt.getService(serviceUuid)
+                                .getCharacteristic(tractionUuid)
 
                         tractionCharacteristic.getDescriptor(cccdUuid)?.let { cccDescriptor ->
                             if (!gatt.setCharacteristicNotification(tractionCharacteristic, true)) {
@@ -199,8 +244,8 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 
                         if (status == GATT_INSUFFICIENT_ENCRYPTION || status == GATT_INSUFFICIENT_AUTHENTICATION) {
                             Log.d("$logTag.$reconnectMethodTag",
-                                "status failed with insufficient encryption or authentication. Trying to bond before attempting connection.")
-                            // TODO: bond
+                                "status failed with insufficient encryption or authentication. Bonding is not supported yet")
+                            // for now we don't support bonding if we want to refer to: https://punchthrough.com/android-ble-guide/
                         }
 
                         if (reconnectAttemptsLeft == 0) {
@@ -222,12 +267,15 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     }
                 }
                 Log.d("$methodTag.connectionFlow", "Connecting to $address")
-                val gatt = connectGatt(androidContext,
+                val currentGatt = connectGatt(androidContext,
                     false,
                     connectionStateChangedCallback,
                     BluetoothDevice.TRANSPORT_LE)
+                gattInUse = currentGatt
                 awaitClose {
-                    gatt.disconnect()
+                    currentGatt.disconnect()
+                    gattInUse = null
+                    sharedFlow = null
                     Log.d("$methodTag.connectionFlow", "Flow closed")
                 }
             }

@@ -7,7 +7,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,9 +52,7 @@ fun RSMNavHost(navController: NavHostController) {
     }
 
     val btPermissions =
-        rememberMultiplePermissionsState(AndroidBluetoothService.REQUIRED_PERMISSIONS) {
-            Log.d("@@@", it.toString())
-        }
+        rememberMultiplePermissionsState(AndroidBluetoothService.REQUIRED_PERMISSIONS)
 
     LaunchedEffect(btPermissions.allPermissionsGranted) {
         btStore.dispatch(BluetoothAction.SetBluetoothPermissionsGranted(btPermissions.allPermissionsGranted))
