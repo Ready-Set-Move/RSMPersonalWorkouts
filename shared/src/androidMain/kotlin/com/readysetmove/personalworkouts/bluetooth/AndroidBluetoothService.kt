@@ -1,8 +1,10 @@
 package com.readysetmove.personalworkouts.bluetooth
 
 import android.Manifest
-import android.bluetooth.*
-import android.bluetooth.BluetoothGatt.*
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
@@ -11,7 +13,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.Connected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.DisConnected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.*
 import kotlinx.coroutines.CancellationException
@@ -21,11 +22,8 @@ import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.util.*
 
-private fun BluetoothGatt.printGattTable() {
+fun BluetoothGatt.printGattTable() {
     if (services.isEmpty()) {
         Log.i("printGattTable",
             "No service and characteristic available, call discoverServices() first?")
@@ -40,12 +38,6 @@ private fun BluetoothGatt.printGattTable() {
         )
     }
 }
-
-private val cccdUuid: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-private val serviceUuid = UUID.fromString("87811010-b3ba-4255-95cc-838c34d33583")
-private val sendUuid = UUID.fromString("0000aa01-0000-1000-8000-00805f9b34fb")
-private val tractionUuid = UUID.fromString("0000aa02-0000-1000-8000-00805f9b34fb")
-private val dataUuid = UUID.fromString("0000aa03-0000-1000-8000-00805f9b34fb")
 
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
@@ -119,138 +111,31 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                 val device = scanForDevice(deviceName).single()
 
                 with(device) {
-                    val connectionStateChangedCallback = object : BluetoothGattCallback() {
-                        var reconnectAttemptsLeft = MAX_RECONNECT_ATTEMPTS
-                        override fun onConnectionStateChange(
-                            gatt: BluetoothGatt?,
-                            status: Int,
-                            newState: Int,
-                        ) {
-                            val logTag = "$methodTag.onConnectionStateChange"
-                            Log.d(logTag, "state changed: status=$status newState=$newState")
-                            if (gatt == null) return
-                            if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
-                                    Manifest.permission.BLUETOOTH_CONNECT)
-                                != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                return disconnect(BluetoothPermissionNotGrantedException("Needed permissions no longer granted. Device: ${device.address}"))
-                            }
-                            if (status != GATT_SUCCESS) {
-                                return reconnect(status = status, gatt = gatt, logTag)
-                            }
-                            if (newState == STATE_CONNECTED) {
-                                reconnectAttemptsLeft = MAX_RECONNECT_ATTEMPTS
-                                Log.d(logTag, "device connected: $deviceName@$address")
-                                gatt.discoverServices()
-                            }
-                            if (newState == STATE_DISCONNECTED) {
-                                Log.d(logTag, "device disconnected: $deviceName@$address")
-                                disconnect(ConnectFailedException("Device disconnected."))
-                            }
+                    val connectionStateChangedCallback = BTLECallback(
+                        androidContext = androidContext,
+                        maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
+                        device = device,
+                        deviceName = deviceName,
+                        rootLogTag = methodTag,
+                        onDeviceConnected = {
+                            trySendBlocking(BluetoothService.BluetoothDeviceActions.Connected(
+                                deviceName = deviceName))
+                        },
+                        onDisconnect = {
+                            disconnect(it)
+
                         }
-
-                        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-                            val logTag = "$methodTag.onServicesDiscovered"
-                            if (gatt == null) return
-                            if (status != GATT_SUCCESS) {
-                                reconnect(status = status, gatt = gatt, logTag)
-                            } else {
-                                Log.d(logTag, "services discovered")
-                                gatt.printGattTable()
-                                enableTractionNotifications(gatt, methodTag)
-                            }
-                        }
-
-                        override fun onCharacteristicChanged(
-                            gatt: BluetoothGatt?,
-                            characteristic: BluetoothGattCharacteristic?,
-                        ) {
-                            val logTag = "$methodTag.onCharacteristicChanged"
-                            Log.d(logTag, "started")
-                            if (characteristic == null) return
-                            val weight =
-                                ByteBuffer.wrap(characteristic.value).order(ByteOrder.LITTLE_ENDIAN)
-                                    .float
-                            trySendBlocking(BluetoothService.BluetoothDeviceActions.WeightChanged(
-                                weight = weight))
-                        }
-
-                        override fun onDescriptorWrite(
-                            gatt: BluetoothGatt?,
-                            descriptor: BluetoothGattDescriptor?,
-                            status: Int,
-                        ) {
-                            val logTag = "$methodTag.onDescriptorWrite"
-                            Log.d(logTag, "received ${descriptor?.uuid}")
-                            if (gatt == null || descriptor?.uuid != cccdUuid) return
-                            if (status != GATT_SUCCESS) {
-                                return reconnect(status = status, gatt = gatt, logTag)
-                            }
-                            Log.d(logTag, "CCC descriptor successfully enabled")
-                            trySendBlocking(Connected(deviceName = deviceName))
-                        }
-
-                        private fun enableTractionNotifications(
-                            gatt: BluetoothGatt,
-                            logTag: String?,
-                        ) {
-                            if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
-                                    Manifest.permission.BLUETOOTH_CONNECT)
-                                != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                return disconnect(BluetoothPermissionNotGrantedException("Needed permissions no longer granted. Device: ${device.address}"))
-                            }
-                            val tractionCharacteristic =
-                                gatt.getService(serviceUuid)
-                                    .getCharacteristic(tractionUuid)
-
-                            tractionCharacteristic.getDescriptor(cccdUuid)?.let { cccDescriptor ->
-                                if (!gatt.setCharacteristicNotification(tractionCharacteristic,
-                                        true)
-                                ) {
-                                    return disconnect(ConnectFailedException("setCharacteristicNotification failed for tractionCharacteristic: $tractionCharacteristic"))
-                                }
-
-                                cccDescriptor.value =
-                                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                                gatt.writeDescriptor(cccDescriptor)
-                                Log.d(logTag, "traction characteristic enabled")
-                            }
-                                ?: disconnect(ConnectFailedException("Traction characteristic does not contain CCC descriptor. $tractionCharacteristic"))
-                        }
-
-                        private fun reconnect(status: Int, gatt: BluetoothGatt, logTag: String) {
-                            val reconnectMethodTag = "reconnect"
-                            Log.d("$logTag.$reconnectMethodTag", "status was failed: $status.")
-                            if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
-                                    Manifest.permission.BLUETOOTH_CONNECT)
-                                != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                return disconnect(BluetoothPermissionNotGrantedException("Needed permissions no longer granted. Device: ${device.address}"))
-                            }
-                            gatt.close()
-
-                            if (status == GATT_INSUFFICIENT_ENCRYPTION || status == GATT_INSUFFICIENT_AUTHENTICATION) {
-                                Log.d("$logTag.$reconnectMethodTag",
-                                    "status failed with insufficient encryption or authentication. Bonding is not supported yet")
-                                // for now we don't support bonding if we want to refer to: https://punchthrough.com/android-ble-guide/
-                            }
-
-                            if (reconnectAttemptsLeft == 0) {
-                                Log.d("$logTag.$reconnectMethodTag",
-                                    "Reconnect failed to many times. Stop retry.")
-                                return disconnect(ConnectFailedException("Too many gatt connection attempts failed. Device: $address"))
-                            }
-                            // TODO: send action to notify user
-                            Log.d("$logTag.$methodTag", "Trying to reconnect.")
-                            reconnectAttemptsLeft--
-                            connectGatt(androidContext,
-                                false,
-                                this,
-                                BluetoothDevice.TRANSPORT_LE)
-                        }
+                    ) { weight ->
+                        trySendBlocking(BluetoothService.BluetoothDeviceActions.WeightChanged(weight))
                     }
                     Log.d("$methodTag.connectionFlow", "Connecting to $address")
+                    if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                            Manifest.permission.BLUETOOTH_CONNECT)
+                        != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        return@callbackFlow disconnect(BluetoothPermissionNotGrantedException(
+                            "Needed permissions no longer granted. Device: ${device.address}"))
+                    }
                     val currentGatt = connectGatt(androidContext,
                         false,
                         connectionStateChangedCallback,
