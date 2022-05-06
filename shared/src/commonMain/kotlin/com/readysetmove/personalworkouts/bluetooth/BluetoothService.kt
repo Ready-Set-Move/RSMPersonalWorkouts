@@ -5,12 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface BluetoothService {
 
-    sealed class BluetoothDeviceActions {
-        data class Connected(val deviceName: String) : BluetoothDeviceActions()
-        object DisConnected : BluetoothDeviceActions()
-        data class WeightChanged(val weight: Float) : BluetoothDeviceActions()
-    }
-
     sealed class BluetoothException(message: String) : Exception(message) {
         class ScanFailedException(message: String) : BluetoothException(message)
         class ConnectFailedException(message: String) : BluetoothException(message)
@@ -18,8 +12,13 @@ interface BluetoothService {
         class BluetoothPermissionNotGrantedException(message: String) : BluetoothException(message)
         class BluetoothConnectPermissionNotGrantedException(message: String) :
             BluetoothException(message)
-
         class NotConnectedException(message: String) : BluetoothException(message)
+    }
+
+    sealed class BluetoothDeviceActions {
+        data class Connected(val deviceName: String) : BluetoothDeviceActions()
+        data class DisConnected(val cause: BluetoothException) : BluetoothDeviceActions()
+        data class WeightChanged(val weight: Float) : BluetoothDeviceActions()
     }
 
     fun connectToDevice(

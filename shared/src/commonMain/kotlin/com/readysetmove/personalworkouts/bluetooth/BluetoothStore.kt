@@ -29,7 +29,8 @@ sealed class BluetoothAction : Action {
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
     data class DeviceConnected(val deviceName: String) : BluetoothAction()
-    object DeviceDisConnected : BluetoothAction()
+
+    //    object DeviceDisConnected : BluetoothAction()
     object SetTara : BluetoothAction()
 }
 
@@ -138,15 +139,15 @@ class BluetoothStore(
                     oldState
                 }
             }
-            is BluetoothAction.DeviceDisConnected -> {
-                if (oldState.activeDevice != null) {
-                    launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice)) }
-                    connectJob = null
-                    oldState.copy(activeDevice = null)
-                } else {
-                    oldState
-                }
-            }
+//            is BluetoothAction.DeviceDisConnected -> {
+//                if (oldState.activeDevice != null) {
+//                    connectJob?.cancel()
+//                    launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice)) }
+//                    oldState.copy(activeDevice = null)
+//                } else {
+//                    oldState
+//                }
+//            }
             is BluetoothAction.SetTara -> {
                 bluetoothService.setTara()
                 oldState
@@ -168,21 +169,34 @@ class BluetoothStore(
                                 action.deviceName))
                         is BluetoothService.BluetoothDeviceActions.WeightChanged -> state.value =
                             state.value.copy(weight = action.weight)
-                        is BluetoothService.BluetoothDeviceActions.DisConnected -> dispatch(
-                            BluetoothAction.DeviceDisConnected)
+                        is BluetoothService.BluetoothDeviceActions.DisConnected -> {
+                            state.value.activeDevice?.let {
+                                sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(it))
+                                state.value = state.value.copy(activeDevice = null)
+                            }
+                            when (action.cause) {
+                                is BluetoothDisabledException ->
+                                    dispatch(BluetoothAction.SetBluetoothEnabled(false))
+                                is BluetoothConnectPermissionNotGrantedException ->
+                                    dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
+                                else -> sideEffect.emit(BluetoothSideEffect.Error(action.cause))
+                            }
+                            cancel()
+                        }
                     }
                 }
             } catch (e: Exception) {
                 dispatch(BluetoothAction.StopScanning)
-                when (if (e is CancellationException) e.cause else e) {
-                    is BluetoothDisabledException ->
-                        dispatch(BluetoothAction.SetBluetoothEnabled(false))
-                    is BluetoothConnectPermissionNotGrantedException ->
-                        dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
-                    is BluetoothService.BluetoothException.ConnectFailedException ->
-                        dispatch(BluetoothAction.DeviceDisConnected)
-                    else -> sideEffect.emit(BluetoothSideEffect.Error(e))
-                }
+                sideEffect.emit(BluetoothSideEffect.Error(e))
+//                when (if (e is CancellationException) e.cause else e) {
+//                    is BluetoothDisabledException ->
+//                        dispatch(BluetoothAction.SetBluetoothEnabled(false))
+//                    is BluetoothConnectPermissionNotGrantedException ->
+//                        dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
+//                    is BluetoothService.BluetoothException.ConnectFailedException ->
+//                        dispatch(BluetoothAction.DeviceDisConnected)
+//                    else -> sideEffect.emit(BluetoothSideEffect.Error(e))
+//                }
             }
         }
 }
