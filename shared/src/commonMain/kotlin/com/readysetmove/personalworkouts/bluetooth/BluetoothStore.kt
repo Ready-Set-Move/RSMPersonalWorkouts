@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.coroutines.CoroutineContext
 
 data class BluetoothState(
     val bluetoothEnabled: Boolean,
@@ -38,7 +39,11 @@ sealed class BluetoothSideEffect : Effect {
     data class DeviceDisConnected(val deviceName: String) : BluetoothSideEffect()
 }
 
-class BluetoothStore(private val bluetoothService: BluetoothService, initialState: BluetoothState) :
+class BluetoothStore(
+    private val bluetoothService: BluetoothService,
+    initialState: BluetoothState,
+    val ioDispatcher: CoroutineContext,
+) :
     Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
     CoroutineScope by CoroutineScope(Dispatchers.Main) {
 
@@ -105,7 +110,9 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
                     }
                     !oldState.scanning -> {
                         val zeeConnectJob = launch {
-                            scanForBtleDevice(oldState.deviceName)
+                            scanForBtleDevice(
+                                deviceName = oldState.deviceName,
+                                coroutineScope = this)
                         }
                         zeeConnectJob.invokeOnCompletion {
                             connectJob = null
@@ -134,6 +141,7 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
             is BluetoothAction.DeviceDisConnected -> {
                 if (oldState.activeDevice != null) {
                     launch { sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(oldState.activeDevice)) }
+                    connectJob = null
                     oldState.copy(activeDevice = null)
                 } else {
                     oldState
@@ -150,29 +158,31 @@ class BluetoothStore(private val bluetoothService: BluetoothService, initialStat
         }
     }
 
-    private suspend fun scanForBtleDevice(deviceName: String) {
-        try {
-            bluetoothService.connectToDevice(deviceName, this).collect { action ->
-                when (action) {
-                    is BluetoothService.BluetoothDeviceActions.Connected -> dispatch(BluetoothAction.DeviceConnected(
-                        action.deviceName))
-                    is BluetoothService.BluetoothDeviceActions.WeightChanged -> state.value =
-                        state.value.copy(weight = action.weight)
-                    is BluetoothService.BluetoothDeviceActions.DisConnected -> dispatch(
-                        BluetoothAction.DeviceDisConnected)
+    private suspend fun scanForBtleDevice(deviceName: String, coroutineScope: CoroutineScope) =
+        withContext(ioDispatcher) {
+            try {
+                bluetoothService.connectToDevice(deviceName, coroutineScope).collect { action ->
+                    when (action) {
+                        is BluetoothService.BluetoothDeviceActions.Connected -> dispatch(
+                            BluetoothAction.DeviceConnected(
+                                action.deviceName))
+                        is BluetoothService.BluetoothDeviceActions.WeightChanged -> state.value =
+                            state.value.copy(weight = action.weight)
+                        is BluetoothService.BluetoothDeviceActions.DisConnected -> dispatch(
+                            BluetoothAction.DeviceDisConnected)
+                    }
+                }
+            } catch (e: Exception) {
+                dispatch(BluetoothAction.StopScanning)
+                when (if (e is CancellationException) e.cause else e) {
+                    is BluetoothDisabledException ->
+                        dispatch(BluetoothAction.SetBluetoothEnabled(false))
+                    is BluetoothConnectPermissionNotGrantedException ->
+                        dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
+                    is BluetoothService.BluetoothException.ConnectFailedException ->
+                        dispatch(BluetoothAction.DeviceDisConnected)
+                    else -> sideEffect.emit(BluetoothSideEffect.Error(e))
                 }
             }
-        } catch (e: Exception) {
-            dispatch(BluetoothAction.StopScanning)
-            when (if (e is CancellationException) e.cause else e) {
-                is BluetoothDisabledException ->
-                    dispatch(BluetoothAction.SetBluetoothEnabled(false))
-                is BluetoothConnectPermissionNotGrantedException ->
-                    dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
-                is BluetoothService.BluetoothException.ConnectFailedException ->
-                    dispatch(BluetoothAction.DeviceDisConnected)
-                else -> sideEffect.emit(BluetoothSideEffect.Error(e))
-            }
         }
-    }
 }

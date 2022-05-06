@@ -145,7 +145,6 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                             gatt.discoverServices()
                         }
                         if (newState == STATE_DISCONNECTED) {
-                            // TODO: should we try auto reconnect here?
                             Log.d(logTag, "device disconnected: $deviceName@$address")
                             trySendBlocking(DisConnected)
                             gatt.close()

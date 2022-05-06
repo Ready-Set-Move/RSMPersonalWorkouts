@@ -24,6 +24,7 @@ import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import kotlinx.coroutines.Dispatchers
 import org.koin.androidx.compose.get
 
 
@@ -91,7 +92,8 @@ fun PreviewDeviceManagementOverviewScreen() {
         DeviceManagementOverviewScreen(
             store = BluetoothStore(
                 bluetoothService = PreviewBluetoothService,
-                initialState = BluetoothState(bluetoothEnabled = true)
+                initialState = BluetoothState(bluetoothEnabled = true),
+                ioDispatcher = Dispatchers.IO
             )
         ) {}
     }

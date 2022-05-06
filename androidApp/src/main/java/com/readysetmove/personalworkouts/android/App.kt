@@ -4,6 +4,7 @@ import android.app.Application
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -23,7 +24,8 @@ class App : Application() {
                 bluetoothService = bluetoothService,
                 initialState = BluetoothState(
                     deviceName = "Roberts Waage",
-                    bluetoothEnabled = bluetoothService.getBluetoothEnabled())
+                    bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
+                ioDispatcher = Dispatchers.IO
             )
         }
     }
