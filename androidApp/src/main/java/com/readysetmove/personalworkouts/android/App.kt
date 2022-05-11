@@ -4,6 +4,7 @@ import android.app.Application
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.device.DeviceStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -27,6 +28,9 @@ class App : Application() {
                     bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
                 ioDispatcher = Dispatchers.IO
             )
+        }
+        single {
+            DeviceStore(get())
         }
     }
 

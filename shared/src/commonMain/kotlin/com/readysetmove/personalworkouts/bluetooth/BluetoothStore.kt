@@ -19,7 +19,7 @@ data class BluetoothState(
     val scanning: Boolean = false,
     val activeDevice: String? = null,
     val deviceName: String? = null,
-    val weight: Float = 0.0f,
+    val traction: Float = 0.0f,
 ) : State
 
 sealed class BluetoothAction : Action {
@@ -28,9 +28,6 @@ sealed class BluetoothAction : Action {
     data class SetBluetoothPermissionsGranted(val granted: Boolean) : BluetoothAction()
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
-    data class DeviceConnected(val deviceName: String) : BluetoothAction()
-
-    //    object DeviceDisConnected : BluetoothAction()
     object SetTara : BluetoothAction()
 }
 
@@ -136,13 +133,6 @@ class BluetoothStore(
                     oldState
                 }
             }
-            is BluetoothAction.DeviceConnected -> {
-                if (oldState.activeDevice != action.deviceName) {
-                    oldState.copy(activeDevice = action.deviceName, scanning = false)
-                } else {
-                    oldState
-                }
-            }
             is BluetoothAction.SetTara -> {
                 bluetoothService.setTara()
                 oldState
@@ -159,15 +149,19 @@ class BluetoothStore(
             try {
                 bluetoothService.connectToDevice(deviceName, coroutineScope).collect { action ->
                     when (action) {
-                        is BluetoothService.BluetoothDeviceActions.Connected -> dispatch(
-                            BluetoothAction.DeviceConnected(
-                                action.deviceName))
-                        is BluetoothService.BluetoothDeviceActions.WeightChanged -> state.value =
-                            state.value.copy(weight = action.weight)
+                        is BluetoothService.BluetoothDeviceActions.Connected ->
+                            if (state.value.activeDevice != action.deviceName) {
+                                state.value = state.value.copy(
+                                    activeDevice = action.deviceName,
+                                    scanning = false
+                                )
+                            }
+                        is BluetoothService.BluetoothDeviceActions.WeightChanged ->
+                            state.value = state.value.copy(traction = action.traction)
                         is BluetoothService.BluetoothDeviceActions.DisConnected -> {
                             state.value.activeDevice?.let {
-                                sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(it))
                                 state.value = state.value.copy(activeDevice = null)
+                                sideEffect.emit(BluetoothSideEffect.DeviceDisConnected(it))
                             }
                             when (action.cause) {
                                 is BluetoothDisabledException ->

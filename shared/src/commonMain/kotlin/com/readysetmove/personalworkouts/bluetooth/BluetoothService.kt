@@ -26,7 +26,7 @@ interface BluetoothService {
     sealed class BluetoothDeviceActions {
         data class Connected(val deviceName: String) : BluetoothDeviceActions()
         data class DisConnected(val cause: BluetoothException) : BluetoothDeviceActions()
-        data class WeightChanged(val weight: Float) : BluetoothDeviceActions()
+        data class WeightChanged(val traction: Float) : BluetoothDeviceActions()
     }
 
     fun connectToDevice(

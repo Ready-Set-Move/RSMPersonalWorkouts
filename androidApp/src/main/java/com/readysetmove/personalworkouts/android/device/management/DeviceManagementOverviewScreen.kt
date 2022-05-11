@@ -24,6 +24,8 @@ import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.device.DeviceAction
+import com.readysetmove.personalworkouts.device.DeviceStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.androidx.compose.get
 
@@ -33,7 +35,7 @@ object DeviceManagementOverviewScreen {
 }
 
 @Composable
-fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack: () -> Unit) {
+fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: DeviceStore = get(), onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
     val state = store.observeState().collectAsState()
@@ -43,6 +45,7 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
         }
         onDispose { store.dispatch(BluetoothAction.StopScanning) }
     }
+    val deviceState = deviceStore.observeState().collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -63,7 +66,19 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), onNavigateBack
             .padding(AppTheme.spacings.md)
         ) {
             state.value.activeDevice?.let {
-                DeviceOverviewCard(deviceName = it, currentWeight = state.value.weight) {
+                DeviceOverviewCard(
+                    deviceName = it,
+                    currentWeight = deviceState.value.traction,
+                    trackingActive = deviceState.value.trackingActive,
+                    trackedTractions = deviceState.value.trackedTractions,
+                    onToggleTracking = {
+                        if (deviceState.value.trackingActive) {
+                            deviceStore.dispatch(DeviceAction.StopTracking)
+                        } else {
+                            deviceStore.dispatch(DeviceAction.StartTracking)
+                        }
+                    }
+                ) {
                     store.dispatch(BluetoothAction.SetTara)
                 }
             }
