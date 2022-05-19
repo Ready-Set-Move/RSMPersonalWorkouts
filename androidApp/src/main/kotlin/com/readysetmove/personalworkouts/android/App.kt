@@ -26,7 +26,8 @@ class App : Application() {
                 initialState = BluetoothState(
                     deviceName = "Roberts Waage",
                     bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
-                ioDispatcher = Dispatchers.IO
+                ioDispatcher = Dispatchers.IO,
+                mainDispatcher = Dispatchers.Main,
             )
         }
         single {

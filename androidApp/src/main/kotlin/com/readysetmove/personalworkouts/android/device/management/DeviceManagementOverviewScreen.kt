@@ -108,7 +108,8 @@ fun PreviewDeviceManagementOverviewScreen() {
             store = BluetoothStore(
                 bluetoothService = PreviewBluetoothService,
                 initialState = BluetoothState(bluetoothEnabled = true),
-                ioDispatcher = Dispatchers.IO
+                ioDispatcher = Dispatchers.IO,
+                mainDispatcher = Dispatchers.Main,
             )
         ) {}
     }

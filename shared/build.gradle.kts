@@ -23,6 +23,9 @@ kotlin {
     }
 
     sourceSets {
+        all {
+            languageSettings.optIn("kotlinx.coroutines.ExperimentalCoroutinesApi")
+        }
         val commonMain by getting {
             dependencies {
                 //Coroutines
@@ -32,6 +35,8 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.mockk)
             }
         }
         val androidMain by getting

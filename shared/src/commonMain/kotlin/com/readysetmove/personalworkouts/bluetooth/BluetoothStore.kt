@@ -40,6 +40,7 @@ sealed class BluetoothSideEffect : Effect {
 class BluetoothStore(
     private val bluetoothService: BluetoothService,
     initialState: BluetoothState,
+    val mainDispatcher: CoroutineContext,
     val ioDispatcher: CoroutineContext,
 ) :
     Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
@@ -57,61 +58,56 @@ class BluetoothStore(
     override fun dispatch(action: BluetoothAction) {
         val oldState = state.value
 
-        val newState = when (action) {
+        when (action) {
             is BluetoothAction.SetBluetoothEnabled -> {
                 if (action.enabled != oldState.bluetoothEnabled) {
                     connectJob?.cancel()
                     connectJob = null
-                    oldState.copy(
+                    state.value = oldState.copy(
                         bluetoothEnabled = action.enabled,
                         // scanning is either off due to disabled or gets turned off now
                         scanning = false,
                         activeDevice = null,
                     )
-                } else {
-                    oldState
                 }
             }
             is BluetoothAction.SetBluetoothPermissionsGranted -> {
                 if (action.granted != oldState.bluetoothPermissionsGranted) {
                     connectJob?.cancel()
                     connectJob = null
-                    oldState.copy(
+                    state.value = oldState.copy(
                         bluetoothPermissionsGranted = action.granted,
                         // scanning is either off due to no permissions or gets turned off now
                         scanning = false,
                         activeDevice = null,
                     )
-                } else {
-                    oldState
                 }
             }
             is BluetoothAction.SetDeviceName -> {
                 if (oldState.deviceName != action.name) {
                     connectJob?.cancel()
-                    oldState.copy(deviceName = action.name)
-                } else {
-                    oldState
+                    state.value = oldState.copy(deviceName = action.name)
                 }
             }
             is BluetoothAction.ScanAndConnect -> {
                 when {
                     !oldState.bluetoothEnabled || !oldState.bluetoothPermissionsGranted -> {
                         // TODO: side effect to inform consumer
-                        oldState
+                        return
                     }
                     oldState.activeDevice != null || connectJob != null -> {
                         // in this case we already started a connection
-                        oldState
+                        return
                     }
                     oldState.deviceName == null -> {
-                        launch {
+                        launch(mainDispatcher) {
                             sideEffect.emit(BluetoothSideEffect.Error(Exception("Unexpected action: can't scan for device without name")))
                         }
-                        oldState
+                        return
                     }
                     !oldState.scanning -> {
-                        val zeeConnectJob = launch {
+                        state.value = oldState.copy(scanning = true)
+                        val zeeConnectJob = launch(ioDispatcher) {
                             scanForBtleDevice(
                                 deviceName = oldState.deviceName,
                                 coroutineScope = this)
@@ -120,27 +116,30 @@ class BluetoothStore(
                             connectJob = null
                         }
                         connectJob = zeeConnectJob
-                        oldState.copy(scanning = true)
                     }
-                    else -> oldState
                 }
             }
+//            is BluetoothAction.DeviceConnected -> {
+//                if (oldState.activeDevice != action.deviceName) {
+//                    oldState.copy(
+//                        activeDevice = action.deviceName,
+//                        scanning = false
+//                    )
+//                }
+//                else oldState
+//            }
+//            is BluetoothAction.DeviceDisconnected -> {
+//                oldState
+//            }
             is BluetoothAction.StopScanning -> {
                 if (oldState.scanning) {
                     connectJob?.cancel()
-                    oldState.copy(scanning = false)
-                } else {
-                    oldState
+                    state.value = oldState.copy(scanning = false)
                 }
             }
             is BluetoothAction.SetTara -> {
                 bluetoothService.setTara()
-                oldState
             }
-        }
-
-        if (newState != oldState) {
-            state.value = newState
         }
     }
 
