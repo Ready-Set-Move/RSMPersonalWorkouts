@@ -64,4 +64,5 @@ android {
         minSdk = 24
         targetSdk = 32
     }
+    namespace = "com.readysetmove.personalworkouts"
 }
