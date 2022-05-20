@@ -120,7 +120,7 @@ class BluetoothStore(
                 }
             }
             is BluetoothAction.SetTara -> {
-                bluetoothService.setTara()
+                if (state.value.activeDevice != null) bluetoothService.setTara()
             }
         }
     }
