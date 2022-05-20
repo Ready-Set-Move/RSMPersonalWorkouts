@@ -106,7 +106,7 @@ class BluetoothStore(
                                 coroutineScope = this)
                         }
                         zeeConnectJob.invokeOnCompletion {
-                            state.value = state.value.copy(scanning = false)
+                            if (state.value.scanning) state.value = state.value.copy(scanning = false)
                             connectJob = null
                         }
                         connectJob = zeeConnectJob

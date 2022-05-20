@@ -8,19 +8,28 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class BluetoothStoreTest {
 
     @Test
-    fun testStoreGoesToConnectedState() = runTest {
+    fun testStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
         val deviceName = "ZeeDevice"
         val flowMock = flow {
             emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
+            yield()
+            emit(BluetoothService.BluetoothDeviceActions.WeightChanged(1f))
+            yield()
+            emit(BluetoothService.BluetoothDeviceActions.WeightChanged(3f))
+            yield()
+            emit(BluetoothService.BluetoothDeviceActions.DisConnected(
+                BluetoothService.BluetoothException.NotConnectedException("Device shut down")))
         }
         val serviceMock = mockk<BluetoothService>()
         every {
@@ -39,20 +48,21 @@ class BluetoothStoreTest {
             ioDispatcher = dispatcher,
         )
         val values = mutableListOf<BluetoothState>()
-        val job = launch(dispatcher) {
-            store.observeState().collect {
-                values.add(it)
-            }
+        val stateGatherJob = launch(dispatcher) {
+            store.observeState().toList(values)
         }
         store.dispatch(BluetoothAction.ScanAndConnect)
-        job.cancel()
+        stateGatherJob.cancel()
         verify { serviceMock.connectToDevice(deviceName = deviceName, externalScope = any()) }
         assertEquals(listOf(
                 initialState,
                 initialState.copy(scanning = true),
-                initialState.copy(activeDevice = deviceName)
+                initialState.copy(activeDevice = deviceName),
+                initialState.copy(activeDevice = deviceName, traction = 1f),
+                initialState.copy(activeDevice = deviceName, traction = 3f),
+                initialState.copy(activeDevice = null, traction = 3f),
             ),
             values,
-            "Check device is set")
+            "Check app flow")
     }
 }
