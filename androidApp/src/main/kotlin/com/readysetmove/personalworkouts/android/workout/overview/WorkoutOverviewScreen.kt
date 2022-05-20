@@ -14,10 +14,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.readysetmove.personalworkouts.android.Exercise
+import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.android.Workout
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.workout.Workout
 
 
 object WorkoutOverviewScreen {

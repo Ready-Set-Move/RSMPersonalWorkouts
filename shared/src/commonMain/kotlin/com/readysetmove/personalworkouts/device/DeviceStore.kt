@@ -1,6 +1,5 @@
 package com.readysetmove.personalworkouts.device
 
-import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
@@ -59,27 +58,21 @@ class DeviceStore(private val bluetoothStore: BluetoothStore):
     }
 
     override fun dispatch(action: DeviceAction) {
-        val oldState = state.value
-
-        val newState = when (action) {
+        when (action) {
             is DeviceAction.StartTracking -> {
-                if (!oldState.trackingActive) {
-                    oldState.copy(trackingActive = true, trackedTractions = emptyList())
+                if (!state.value.trackingActive) {
+                    state.value.copy(trackingActive = true, trackedTractions = emptyList())
                 } else {
-                    oldState
+                    state.value
                 }
             }
             is DeviceAction.StopTracking -> {
-                if (oldState.trackingActive) {
-                    oldState.copy(trackingActive = false)
+                if (state.value.trackingActive) {
+                    state.value.copy(trackingActive = false)
                 } else {
-                    oldState
+                    state.value
                 }
             }
-        }
-
-        if (newState != oldState) {
-            state.value = newState
         }
     }
 

@@ -25,6 +25,8 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.Workout
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
 

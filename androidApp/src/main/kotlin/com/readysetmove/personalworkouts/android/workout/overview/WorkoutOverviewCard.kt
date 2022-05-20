@@ -17,9 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.readysetmove.personalworkouts.android.Exercise
+import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.android.Workout
+import com.readysetmove.personalworkouts.workout.Workout
 import com.readysetmove.personalworkouts.android.components.ExpandableContent
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 

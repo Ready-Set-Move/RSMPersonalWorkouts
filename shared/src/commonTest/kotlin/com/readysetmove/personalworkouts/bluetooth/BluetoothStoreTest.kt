@@ -1,9 +1,5 @@
-package com.readysetmove.personalworkouts
+package com.readysetmove.personalworkouts.bluetooth
 
-import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
-import com.readysetmove.personalworkouts.bluetooth.BluetoothService
-import com.readysetmove.personalworkouts.bluetooth.BluetoothState
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -55,13 +51,13 @@ class BluetoothStoreTest {
         stateGatherJob.cancel()
         verify { serviceMock.connectToDevice(deviceName = deviceName, externalScope = any()) }
         assertEquals(listOf(
-                initialState,
-                initialState.copy(scanning = true),
-                initialState.copy(activeDevice = deviceName),
-                initialState.copy(activeDevice = deviceName, traction = 1f),
-                initialState.copy(activeDevice = deviceName, traction = 3f),
-                initialState.copy(activeDevice = null, traction = 3f),
-            ),
+            initialState,
+            initialState.copy(scanning = true),
+            initialState.copy(activeDevice = deviceName),
+            initialState.copy(activeDevice = deviceName, traction = 1f),
+            initialState.copy(activeDevice = deviceName, traction = 3f),
+            initialState.copy(activeDevice = null, traction = 3f),
+        ),
             values,
             "Check app flow")
     }
@@ -95,10 +91,10 @@ class BluetoothStoreTest {
         store.dispatch(BluetoothAction.StopScanning)
         stateGatherJob.cancel()
         assertEquals(listOf(
-                initialState,
-                initialState.copy(scanning = true),
-                initialState,
-            ),
+            initialState,
+            initialState.copy(scanning = true),
+            initialState,
+        ),
             values,
             "Check stop scanning")
     }
@@ -139,11 +135,11 @@ class BluetoothStoreTest {
         stateGatherJob.cancel()
         verify { serviceMock.setTara() }
         assertEquals(listOf(
-                initialState,
-                initialState.copy(scanning = true),
-                initialState.copy(activeDevice = deviceName),
-                initialState.copy(bluetoothEnabled = false),
-            ),
+            initialState,
+            initialState.copy(scanning = true),
+            initialState.copy(activeDevice = deviceName),
+            initialState.copy(bluetoothEnabled = false),
+        ),
             values,
             "Check stop scanning")
     }
