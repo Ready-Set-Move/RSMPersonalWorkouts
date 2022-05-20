@@ -19,7 +19,7 @@ import kotlin.test.assertEquals
 class BluetoothStoreTest {
 
     @Test
-    fun testStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
+    fun theStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
         val deviceName = "ZeeDevice"
         val flowMock = flow {
             emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
@@ -64,5 +64,42 @@ class BluetoothStoreTest {
             ),
             values,
             "Check app flow")
+    }
+
+    @Test
+    fun theStoreAbortsScanningOnStopScanning() = runTest {
+        val deviceName = "ZeeDevice"
+        val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
+        }
+        val serviceMock = mockk<BluetoothService>()
+        every {
+            serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
+        } returns flowMock
+        val dispatcher = UnconfinedTestDispatcher(testScheduler)
+        val initialState = BluetoothState(
+            bluetoothEnabled = true,
+            deviceName = deviceName,
+            bluetoothPermissionsGranted = true,
+        )
+        val store = BluetoothStore(
+            bluetoothService = serviceMock,
+            initialState = initialState,
+            mainDispatcher = dispatcher,
+            ioDispatcher = dispatcher,
+        )
+        val values = mutableListOf<BluetoothState>()
+        val stateGatherJob = launch(dispatcher) {
+            store.observeState().toList(values)
+        }
+        store.dispatch(BluetoothAction.ScanAndConnect)
+        store.dispatch(BluetoothAction.StopScanning)
+        stateGatherJob.cancel()
+        assertEquals(listOf(
+                initialState,
+                initialState.copy(scanning = true),
+                initialState,
+            ),
+            values,
+            "Check stop scanning")
     }
 }
