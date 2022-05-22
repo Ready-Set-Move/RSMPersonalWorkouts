@@ -25,16 +25,19 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.workout.Exercise
-import com.readysetmove.personalworkouts.workout.Workout
+import com.readysetmove.personalworkouts.workout.Mocks
+import com.readysetmove.personalworkouts.workout.WorkoutAction
+import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
 
 @Composable
 fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
+    val workoutStore: WorkoutStore by inject()
+    val workoutState = workoutStore.observeState().collectAsState()
     val btStore: BluetoothStore by inject()
-    val state = btStore.observeState().collectAsState()
+    val btState = btStore.observeState().collectAsState()
 
     val bluetoothAdapter: BluetoothAdapter by remember {
         val bluetoothManager =
@@ -65,8 +68,8 @@ fun RSMNavHost(navController: NavHostController) {
             btStore.dispatch(BluetoothAction.SetBluetoothEnabled(result.resultCode == Activity.RESULT_OK))
         }
 
-    if (!state.value.bluetoothEnabled) {
-        LaunchedEffect(state.value.bluetoothEnabled) {
+    if (!btState.value.bluetoothEnabled) {
+        LaunchedEffect(btState.value.bluetoothEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestActivateBTLauncher.launch(enableBtIntent)
         }
@@ -80,15 +83,19 @@ fun RSMNavHost(navController: NavHostController) {
         }
     }
 
-    if (!state.value.bluetoothPermissionsGranted) {
+    if (!btState.value.bluetoothPermissionsGranted) {
         GrantPermissionsScreen(btPermissions = btPermissions)
         return
     }
 
+    // Simulate retrieving workout
+    LaunchedEffect(true) {
+        workoutStore.dispatch(WorkoutAction.SetWorkout(Mocks.workout))
+    }
+
     NavHost(
         navController = navController,
-//        startDestination = WorkoutOverviewScreen.ROUTE,
-        startDestination = DeviceManagementOverviewScreen.ROUTE,
+        startDestination = WorkoutOverviewScreen.ROUTE,
     )
     {
         composable(route = GrantPermissionsScreen.ROUTE) {
@@ -96,19 +103,15 @@ fun RSMNavHost(navController: NavHostController) {
         }
         composable(route = WorkoutOverviewScreen.ROUTE) {
             WorkoutOverviewScreen(
-                Workout(exercises = listOf(Exercise(name = "Rows",
-                    comment = "Rows Cmt"),
-                    Exercise(name = "Front Press", comment = "Press Cmt"),
-                    Exercise(name = "Deadlift", comment = "DL Cmt")),
-                    comment = "Wkt Cmt"),
-                onStartWorkout = { navController.navigate(DeviceManagementOverviewScreen.ROUTE) }
-//                onStartWorkout = { navController.navigate(WorkoutScreen.ROUTE) }
+                workoutState.value.workout,
+                onStartWorkout = { navController.navigate(WorkoutScreen.ROUTE) }
             )
         }
         composable(route = SettingsScreen.ROUTE) {
             SettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(route = WorkoutScreen.ROUTE) {
+            // TODO: extract workout parameters from route to deeplink to exercise & set
             WorkoutScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {

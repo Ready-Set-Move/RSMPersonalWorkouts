@@ -5,6 +5,7 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -32,6 +33,13 @@ class App : Application() {
         }
         single {
             DeviceStore(get())
+        }
+        single {
+            WorkoutStore(
+                deviceStore = get(),
+                ioDispatcher = Dispatchers.IO,
+                mainDispatcher = Dispatchers.Main
+            )
         }
     }
 

@@ -14,9 +14,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.workout.Mocks
 import com.readysetmove.personalworkouts.workout.Workout
 
 
@@ -25,7 +25,7 @@ object WorkoutOverviewScreen {
 }
 
 @Composable
-fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
+fun WorkoutOverviewScreen(workout: Workout?, onStartWorkout: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout_overview__screen_title)
     Scaffold(
@@ -51,6 +51,8 @@ fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
             .verticalScroll(scrollState)
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
+            if (workout == null) return@Column Text(text = "No workout set")
+
             WorkoutOverviewCard(stringResource(R.string.workout_overview__todays_workout_title),
                 workout = workout)
         }
@@ -68,10 +70,7 @@ fun WorkoutOverviewScreen(workout: Workout, onStartWorkout: () -> Unit) {
 fun PreviewWorkoutOverviewScreen() {
     AppTheme {
         WorkoutOverviewScreen(
-            Workout(exercises = listOf(Exercise(name = "Rows", "Rows Cmt"),
-                Exercise(name = "Front Press", "Press Cmt"),
-                Exercise(name = "Deadlift", "DL Cmt"), Exercise(name = "Squats", "Squats Cmt")),
-                "Wkt Cmt"),
+            workout = Mocks.workout,
             onStartWorkout = {}
         )
     }

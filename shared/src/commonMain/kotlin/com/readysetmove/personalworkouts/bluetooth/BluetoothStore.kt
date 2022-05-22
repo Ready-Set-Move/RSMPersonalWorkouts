@@ -44,7 +44,7 @@ class BluetoothStore(
     val ioDispatcher: CoroutineContext,
 ) :
     Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
-    CoroutineScope by CoroutineScope(Dispatchers.Main) {
+    CoroutineScope by CoroutineScope(mainDispatcher) {
 
     private val state = MutableStateFlow(
         initialState.copy()

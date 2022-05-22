@@ -17,11 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.workout.Workout
 import com.readysetmove.personalworkouts.android.components.ExpandableContent
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.Mocks
+import com.readysetmove.personalworkouts.workout.Workout
 
 @Composable
 fun WorkoutOverviewCard(title: String, workout: Workout) {
@@ -88,11 +89,7 @@ fun WorkoutRow(exercise: Exercise, expanded: Boolean) {
 fun PreviewWorkoutOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            WorkoutOverviewCard(title = "Your Workout",
-                workout = Workout(exercises = listOf(Exercise(name = "Rows", "Rows Cmt"),
-                    Exercise(name = "Front Press", "Press Cmt"),
-                    Exercise(name = "Deadlift", "DL Cmt"), Exercise(name = "Squats", "Squats Cmt")),
-                    "Wkt Cmt"))
+            WorkoutOverviewCard(title = "Your Workout", workout = Mocks.workout)
         }
     }
 }

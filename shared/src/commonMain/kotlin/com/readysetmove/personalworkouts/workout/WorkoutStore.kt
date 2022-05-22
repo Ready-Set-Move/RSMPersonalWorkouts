@@ -7,7 +7,6 @@ import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,14 +39,15 @@ sealed class WorkoutSideEffect : Effect {
 }
 
 class WorkoutStore(
+    initialState: WorkoutState = WorkoutState(),
     private val deviceStore: DeviceStore,
     private val mainDispatcher: CoroutineContext,
     private val ioDispatcher: CoroutineContext,
 ):
     Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
-    CoroutineScope by CoroutineScope(Dispatchers.Main) {
+    CoroutineScope by CoroutineScope(mainDispatcher) {
 
-    private val state = MutableStateFlow(WorkoutState())
+    private val state = MutableStateFlow(initialState)
     private val sideEffect = MutableSharedFlow<WorkoutSideEffect>()
     override fun observeState(): StateFlow<WorkoutState> = state
     override fun observeSideEffect(): Flow<WorkoutSideEffect> = sideEffect
