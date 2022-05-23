@@ -39,6 +39,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
         } else null
         prepareTest()
         runTest(workoutStore)
+        testScheduler.advanceUntilIdle()
         gatherStatesJob?.cancel()
         if (verify != null) verify(values)
     }

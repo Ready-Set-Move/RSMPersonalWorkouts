@@ -25,7 +25,7 @@ object WorkoutScreen {
 }
 
 @Composable
-fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Float, timeToRest: Float, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
+fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Long, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout__screen_title)
     Scaffold(
@@ -47,9 +47,9 @@ fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Float, timeToRest: F
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
             Text(text = exercise.name)
-            Text(text = set.tractionGoal.toString())
-            Text(text = "Work: ${if (timeToWork > 1) "%.0f".format(timeToWork) else "%.1f".format(timeToWork)} s")
-            Text(text = "Rest: ${if (timeToRest > 1) "%.0f".format(timeToRest) else "%.1f".format(timeToRest)} s")
+            Text(text = "Weight: ${set.tractionGoal/1000} kg")
+            Text(text = "Work: ${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)} s")
+            Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
             Button(onClick = onStartSet) {
                 Text(text = "Start Set")
             }
@@ -70,8 +70,8 @@ fun PreviewWorkoutScreen() {
         WorkoutScreen(
             exercise = EntityMocks.ROWS,
             set = EntityMocks.SET,
-            timeToWork = 6f,
-            timeToRest = 0f,
+            timeToWork = 6000,
+            timeToRest = 0,
             onStartSet = {},
             onNavigateBack = {}
         )

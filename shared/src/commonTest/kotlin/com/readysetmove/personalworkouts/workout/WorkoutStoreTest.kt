@@ -1,6 +1,7 @@
 package com.readysetmove.personalworkouts.workout
 
 import com.readysetmove.personalworkouts.TestStores
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,7 +28,7 @@ class WorkoutStoreTest {
                         tractionGoal = tractionGoal,
                         timeToWork = initialTimeToWork
                     ))
-                    for (timeToWork in (initialTimeToWork*100).toInt() downTo 0) {
+                    for (timeToWork in initialTimeToWork downTo 0 step 10) {
                         expectedStates.add(
                             WorkoutState(
                                 workoutProgress =  WorkoutProgress(
@@ -36,11 +37,20 @@ class WorkoutStoreTest {
                                     activeSet = EntityMocks.ONE_SET_WORKOUT.exercises[0].sets[0]
                                 ),
                                 tractionGoal = tractionGoal,
-                                timeToWork = timeToWork.toFloat() / 100,
+                                timeToWork = timeToWork,
                                 working = true
                             )
                         )
                     }
+                    expectedStates.add(WorkoutState(
+                        workoutProgress =  WorkoutProgress(
+                            workout = EntityMocks.ONE_SET_WORKOUT,
+                            activeExercise = EntityMocks.ONE_SET_WORKOUT.exercises[0],
+                            activeSet = EntityMocks.ONE_SET_WORKOUT.exercises[0].sets[0]
+                        ),
+                        tractionGoal = tractionGoal,
+                        timeToWork = initialTimeToWork,
+                    ))
                     assertEquals(
                         expectedStates,
                         workoutStates,
@@ -50,6 +60,7 @@ class WorkoutStoreTest {
             ) { workoutStore ->
                 workoutStore.dispatch(WorkoutAction.StartWorkout(EntityMocks.ONE_SET_WORKOUT))
                 workoutStore.dispatch(WorkoutAction.StartSet)
+                advanceUntilIdle()
             }
         }
     }

@@ -1,8 +1,8 @@
 package com.readysetmove.personalworkouts.workout
 
 object EntityMocks {
-    val SET = Set(tractionGoal = 50f, duration = 6f, restTime = 5f)
-    private val SHORT_SET = Set(tractionGoal = 10f, duration = 2f, restTime = 1f)
+    val SET = Set(tractionGoal = 50000, duration = 6000, restTime = 5000)
+    private val SHORT_SET = Set(tractionGoal = 10000, duration = 2000, restTime = 1000)
     private val SETS = listOf(SET, SET, SET)
     private val SHORT_SETS = listOf(SHORT_SET, SHORT_SET, SHORT_SET)
     val ROWS = Exercise(name = "Rows", comment = "Rows Cmt", sets = SETS)
@@ -15,6 +15,6 @@ object EntityMocks {
             exercises = listOf(Exercise(
                 name = "ONE SET",
                 comment = "One Set",
-                sets = listOf(Set(tractionGoal = 1337f, duration = .1f, restTime = .2f)))),
+                sets = listOf(Set(tractionGoal = 1337000, duration = 100, restTime = 200)))),
             comment = "Only one set")
 }
