@@ -102,7 +102,6 @@ class WorkoutStore(
                         launch {
                             sideEffect.emit(WorkoutSideEffect.WorkoutFinished("RESULTS"))
                         }
-                        dispatch(WorkoutAction.StartWorkout(workoutProgress.workout))
                         return
                     }
 
@@ -136,15 +135,7 @@ class WorkoutStore(
                     workTimeCountdown.invokeOnCompletion {
                         deviceStore.dispatch(DeviceAction.StopTracking)
                         // TODO: store results
-                        // last set of last exercise?
-                        if (
-                            workoutProgress.activeExercise == workoutProgress.workout.exercises.last() &&
-                            workoutProgress.activeSet == workoutProgress.activeExercise.sets.last()
-                        ) {
-                            dispatch(WorkoutAction.FinishExercise)
-                        } else {
-                            dispatch(WorkoutAction.StartRest)
-                        }
+                        dispatch(WorkoutAction.StartRest)
                         state.value = state.value.copy(working = false)
                     }
                 }

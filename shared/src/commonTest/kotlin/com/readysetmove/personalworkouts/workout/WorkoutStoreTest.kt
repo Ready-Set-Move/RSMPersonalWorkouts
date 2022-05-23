@@ -11,6 +11,7 @@ class WorkoutStoreTest {
     @Test
     fun theStoreYieldsTheProgressForTheSetWorkout() = runTest {
         val stores = TestStores(testScheduler)
+        // TODO: test emitted sideffects and more complex workout
         stores.useBluetoothStore {
             bluetoothStore ->
             stores.useWorkoutStore(bluetoothStore = bluetoothStore,
@@ -49,7 +50,6 @@ class WorkoutStoreTest {
                             activeSet = EntityMocks.ONE_SET_WORKOUT.exercises[0].sets[0]
                         ),
                         tractionGoal = tractionGoal,
-                        timeToWork = initialTimeToWork,
                     ))
                     assertEquals(
                         expectedStates,
