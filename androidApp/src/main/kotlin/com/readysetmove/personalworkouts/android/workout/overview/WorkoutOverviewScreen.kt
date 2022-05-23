@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.workout.Mocks
+import com.readysetmove.personalworkouts.workout.EntityMocks
 import com.readysetmove.personalworkouts.workout.Workout
 
 
@@ -70,7 +70,7 @@ fun WorkoutOverviewScreen(workout: Workout?, onStartWorkout: () -> Unit) {
 fun PreviewWorkoutOverviewScreen() {
     AppTheme {
         WorkoutOverviewScreen(
-            workout = Mocks.workout,
+            workout = EntityMocks.WORKOUT,
             onStartWorkout = {}
         )
     }

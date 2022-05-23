@@ -15,34 +15,45 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
+data class WorkoutProgress(
+    val workout: Workout,
+    val activeExercise: Exercise,
+    val activeSet: Set,
+)
+
 data class WorkoutState(
-    val workout: Workout? = null,
-    val activeExercise: Exercise? = null,
-    val activeSet: Set? = null,
+    val workoutProgress: WorkoutProgress? = null,
     val timeToWork: Float = 0f,
     val timeToRest: Float = 0f,
+    val tractionGoal: Float? = null,
     val working: Boolean = false,
 ) : State
 
 sealed class WorkoutAction: Action {
-    data class SetWorkout(val workout: Workout): WorkoutAction()
-    object NextExercise: WorkoutAction()
+    data class StartWorkout(val workout: Workout): WorkoutAction()
+    object FinishExercise: WorkoutAction()
     object StartSet: WorkoutAction()
     object StartRest: WorkoutAction()
     data class SetTractionGoal(val tractionGoal: Float): WorkoutAction()
     data class SetDurationGoal(val durationGoal: Float): WorkoutAction()
 }
 
-sealed class WorkoutSideEffect : Effect {
-    data class Error(val error: Exception) : WorkoutSideEffect()
-    data class WorkoutFinished(val results: String) : WorkoutSideEffect()
+sealed class WorkoutExceptions : Exception() {
+    data class EmptyWorkoutException(val workout: Workout): WorkoutExceptions()
+    data class EmptyExcerciseException(
+        val workout: Workout,
+        val exercise: Exercise,
+    ): WorkoutExceptions()
+}
+
+sealed class WorkoutStoreExceptions : Exception() {
+    object WorkoutNotSetException: WorkoutStoreExceptions()
 }
 
 class WorkoutStore(
     initialState: WorkoutState = WorkoutState(),
     private val deviceStore: DeviceStore,
     private val mainDispatcher: CoroutineContext,
-    private val ioDispatcher: CoroutineContext,
 ):
     Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
     CoroutineScope by CoroutineScope(mainDispatcher) {
@@ -52,71 +63,65 @@ class WorkoutStore(
     override fun observeState(): StateFlow<WorkoutState> = state
     override fun observeSideEffect(): Flow<WorkoutSideEffect> = sideEffect
 
-    private var currentExerciseIndex = 0
-    private var currentSetIndex = 0
+    private fun launchError(error: WorkoutSideEffect.Error) {
+        launch {
+            sideEffect.emit(error)
+        }
+    }
 
     override fun dispatch(action: WorkoutAction) {
-        val check4Set = {
-            if (state.value.activeSet == null) {
-                launch(mainDispatcher) {
-                    sideEffect.emit(WorkoutSideEffect.Error(Exception("No set active.")))
-                }
-            }
-            state.value.activeSet
-        }
         val check4Workout = {
-            if (state.value.workout == null) {
-                launch(mainDispatcher) {
-                    sideEffect.emit(WorkoutSideEffect.Error(Exception("Workout not set.")))
-                }
+            if (state.value.workoutProgress == null) {
+                launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.WorkoutNotSetException))
             }
-            state.value.workout
+            state.value.workoutProgress
         }
         when(action) {
-            is WorkoutAction.SetWorkout -> {
-                currentExerciseIndex = 0
-                currentSetIndex = 0
-                val firstExercise =
-                    if (action.workout.exercises.isEmpty()) null
-                    else action.workout.exercises[0]
-                val firstSet = firstExercise?.let {
-                    if (it.sets.isEmpty()) null
-                    else it.sets[0]
-                }
+            is WorkoutAction.StartWorkout -> {
+                if (!action.workout.isValid(launchError = this::launchError)) return
+
+                val firstExercise = action.workout.exercises.first()
+                val firstSet = firstExercise.sets.first()
                 state.value = WorkoutState(
-                    workout = action.workout,
-                    activeExercise = firstExercise,
-                    activeSet = firstSet
+                    workoutProgress = WorkoutProgress(
+                        workout = action.workout,
+                        activeExercise = firstExercise,
+                        activeSet = firstSet,
+                    ),
+                    timeToWork = firstSet.duration,
+                    timeToRest = 0f,
+                    tractionGoal = firstSet.tractionGoal,
                 )
             }
-            is WorkoutAction.NextExercise -> {
-                check4Workout()?.let { workout ->
-                    val newExerciseIndex = currentExerciseIndex + 1
-                    if (workout.exercises.size > newExerciseIndex) {
-                        currentExerciseIndex = newExerciseIndex
-                        val activeExercise = workout.exercises[newExerciseIndex].copy()
-                        if (activeExercise.sets.isEmpty()) {
-                            launch(mainDispatcher) {
-                                sideEffect.emit(WorkoutSideEffect.Error(Exception("Exercise without sets.")))
-                            }
-                            return
-                        }
-                        val activeSet = activeExercise.sets[0].copy()
-                        state.value = state.value.copy(
-                            activeExercise = activeExercise,
-                            activeSet = activeSet,
-                            timeToRest = 0f,
-                            timeToWork = activeSet.duration,
-                        )
+            is WorkoutAction.FinishExercise -> {
+                check4Workout()?.let { workoutProgress ->
+                    // already last exercise?
+                    if (workoutProgress.activeExercise == workoutProgress.workout.exercises.last()) {
+                        dispatch(WorkoutAction.StartWorkout(workoutProgress.workout))
+                        return
                     }
+
+                    val nextExercise = workoutProgress.workout.exercises[
+                            workoutProgress.workout.exercises.indexOf(workoutProgress.activeExercise) + 1
+                        ]
+                    val activeSet = nextExercise.sets[0].copy()
+                    state.value = state.value.copy(
+                        workoutProgress = workoutProgress.copy(
+                            activeExercise = nextExercise,
+                            activeSet = activeSet,
+                        ),
+                        timeToRest = 0f,
+                        timeToWork = activeSet.duration,
+                        tractionGoal = activeSet.tractionGoal,
+                    )
                 }
             }
             is WorkoutAction.StartSet -> {
-                check4Workout()?.let { workout ->
+                check4Workout()?.let { workoutProgress ->
                     // Start the set and count down time
                     deviceStore.dispatch(DeviceAction.StartTracking)
                     // count down work time
-                    val workTimeCountdown = launch(ioDispatcher) {
+                    val workTimeCountdown = launch {
                         while (state.value.timeToWork > 0f) {
                             delay(10)
                             state.value = state.value.copy(timeToWork = state.value.timeToWork - .01f)
@@ -127,10 +132,10 @@ class WorkoutStore(
                         // TODO: store results
                         // last set of last exercise?
                         if (
-                            currentExerciseIndex == workout.exercises.size - 1 &&
-                            currentSetIndex == workout.exercises[currentExerciseIndex].sets.size - 1
+                            workoutProgress.activeExercise == workoutProgress.workout.exercises.last() &&
+                            workoutProgress.activeSet == workoutProgress.activeExercise.sets.last()
                         ) {
-                            launch(mainDispatcher) {
+                            launch {
                                 sideEffect.emit(WorkoutSideEffect.WorkoutFinished("RESULTS"))
                             }
                         } else {
@@ -142,36 +147,59 @@ class WorkoutStore(
                 }
             }
             is WorkoutAction.StartRest -> {
-                check4Set()?.let { set ->
-                    state.value = state.value.copy(timeToRest = set.restTime)
-                    val restTimeCounter = launch(ioDispatcher) {
+                check4Workout()?.let { workoutProgress ->
+                    state.value = state.value.copy(
+                        timeToRest = workoutProgress.activeSet.restTime,
+                        timeToWork = 0f,
+                    )
+                    val restTimeCounter = launch {
                         while (state.value.timeToRest > 0f) {
                             delay(10)
                             state.value = state.value.copy(timeToRest = state.value.timeToRest - .01f)
                         }
                     }
                     restTimeCounter.invokeOnCompletion {
-                        dispatch(WorkoutAction.NextExercise)
+                        dispatch(WorkoutAction.FinishExercise)
                     }
                 }
             }
             is WorkoutAction.SetDurationGoal -> {
                 if (state.value.working) return
-                check4Set()?.let {
-                    state.value = state.value.copy(
-                        timeToWork = action.durationGoal
-                    )
+                check4Workout()?.let {
+                    state.value = state.value.copy(timeToWork = action.durationGoal)
                 }
             }
             is WorkoutAction.SetTractionGoal -> {
                 if (state.value.working) return
-                check4Set()?.let { set ->
-                    state.value = state.value.copy(
-                        activeSet = set.copy(tractionGoal = action.tractionGoal)
-                    )
-                }
-
+                    state.value = state.value.copy(tractionGoal = action.tractionGoal)
             }
         }
     }
 }
+
+sealed class WorkoutSideEffect : Effect {
+    data class Error(val error: Exception) : WorkoutSideEffect()
+    data class WorkoutFinished(val results: String) : WorkoutSideEffect()
+}
+
+fun Workout.isValid(launchError: (WorkoutSideEffect.Error) -> Unit): Boolean {
+    if (exercises.isEmpty()) {
+        launchError(WorkoutSideEffect.Error(
+            WorkoutExceptions.EmptyWorkoutException(this)
+        ))
+        return false
+    }
+    exercises.forEach { exercise ->
+        if (exercise.sets.isEmpty()) {
+            launchError(WorkoutSideEffect.Error(
+                WorkoutExceptions.EmptyExcerciseException(
+                    workout = this,
+                    exercise = exercise,
+                )
+            ))
+            return false
+        }
+    }
+    return true
+}
+

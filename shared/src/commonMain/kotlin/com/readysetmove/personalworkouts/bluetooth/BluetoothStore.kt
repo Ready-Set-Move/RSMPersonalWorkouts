@@ -93,14 +93,14 @@ class BluetoothStore(
                         return
                     }
                     deviceName == null -> {
-                        launch(mainDispatcher) {
+                        launch {
                             sideEffect.emit(BluetoothSideEffect.Error(Exception("Unexpected action: can't scan for device without name")))
                         }
                         return
                     }
                     !state.value.scanning -> {
                         state.value = state.value.copy(scanning = true)
-                        val zeeConnectJob = launch(ioDispatcher) {
+                        val zeeConnectJob = launch {
                             scanForBtleDevice(
                                 deviceName = deviceName,
                                 coroutineScope = this)

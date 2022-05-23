@@ -70,7 +70,7 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: D
                     deviceName = it,
                     currentWeight = deviceState.value.traction,
                     trackingActive = deviceState.value.trackingActive,
-                    trackedTractions = deviceState.value.trackedTractions,
+                    trackedTractions = deviceState.value.trackedTraction,
                     onToggleTracking = {
                         if (deviceState.value.trackingActive) {
                             deviceStore.dispatch(DeviceAction.StopTracking)

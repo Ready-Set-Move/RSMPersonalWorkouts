@@ -32,12 +32,14 @@ class App : Application() {
             )
         }
         single {
-            DeviceStore(get())
+            DeviceStore(
+                bluetoothStore =  get(),
+                mainDispatcher = Dispatchers.Main,
+            )
         }
         single {
             WorkoutStore(
                 deviceStore = get(),
-                ioDispatcher = Dispatchers.IO,
                 mainDispatcher = Dispatchers.Main
             )
         }

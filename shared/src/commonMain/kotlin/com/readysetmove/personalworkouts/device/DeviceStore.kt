@@ -6,17 +6,17 @@ import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 data class DeviceState(
     val traction: Float = 0.0f,
     val trackingActive: Boolean = false,
-    val trackedTractions: List<Float> = emptyList(),
+    val trackedTraction: List<Float> = emptyList(),
 ) : State
 
 sealed class DeviceAction: Action {
@@ -29,9 +29,12 @@ sealed class DeviceSideEffect : Effect {
 }
 
 
-class DeviceStore(private val bluetoothStore: BluetoothStore):
+class DeviceStore(
+    private val bluetoothStore: BluetoothStore,
+    private val mainDispatcher: CoroutineContext,
+):
     Store<DeviceState, DeviceAction, DeviceSideEffect>,
-    CoroutineScope by CoroutineScope(Dispatchers.Main) {
+    CoroutineScope by CoroutineScope(mainDispatcher) {
 
     private val state = MutableStateFlow(DeviceState())
     private val sideEffect = MutableSharedFlow<DeviceSideEffect>()
@@ -46,11 +49,11 @@ class DeviceStore(private val bluetoothStore: BluetoothStore):
                 if (!state.value.trackingActive) {
                     state.value = state.value.copy(traction = bluetoothState.traction)
                 } else {
-                    val trackedTractionsUpdate = state.value.trackedTractions.toMutableList()
+                    val trackedTractionsUpdate = state.value.trackedTraction.toMutableList()
                     trackedTractionsUpdate.add(bluetoothState.traction)
                     state.value = state.value.copy(
                         traction = bluetoothState.traction,
-                        trackedTractions = trackedTractionsUpdate
+                        trackedTraction = trackedTractionsUpdate
                     )
                 }
             }
@@ -61,16 +64,12 @@ class DeviceStore(private val bluetoothStore: BluetoothStore):
         when (action) {
             is DeviceAction.StartTracking -> {
                 if (!state.value.trackingActive) {
-                    state.value.copy(trackingActive = true, trackedTractions = emptyList())
-                } else {
-                    state.value
+                    state.value = state.value.copy(trackingActive = true, trackedTraction = emptyList())
                 }
             }
             is DeviceAction.StopTracking -> {
                 if (state.value.trackingActive) {
-                    state.value.copy(trackingActive = false)
-                } else {
-                    state.value
+                    state.value = state.value.copy(trackingActive = false)
                 }
             }
         }

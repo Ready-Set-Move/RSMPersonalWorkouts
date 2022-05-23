@@ -16,13 +16,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.workout.EntityMocks
+import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.Set
 
 object WorkoutScreen {
     const val ROUTE = "workout"
 }
 
 @Composable
-fun WorkoutScreen(onNavigateBack: () -> Unit) {
+fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Float, timeToRest: Float, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout__screen_title)
     Scaffold(
@@ -43,7 +46,13 @@ fun WorkoutScreen(onNavigateBack: () -> Unit) {
             .verticalScroll(scrollState)
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
-            Text(text = "Some Exercise")
+            Text(text = exercise.name)
+            Text(text = set.tractionGoal.toString())
+            Text(text = "Work: ${if (timeToWork > 1) "%.0f".format(timeToWork) else "%.1f".format(timeToWork)} s")
+            Text(text = "Rest: ${if (timeToRest > 1) "%.0f".format(timeToRest) else "%.1f".format(timeToRest)} s")
+            Button(onClick = onStartSet) {
+                Text(text = "Start Set")
+            }
         }
     }
 }
@@ -58,6 +67,13 @@ fun WorkoutScreen(onNavigateBack: () -> Unit) {
 @Composable
 fun PreviewWorkoutScreen() {
     AppTheme {
-        WorkoutScreen(onNavigateBack = {})
+        WorkoutScreen(
+            exercise = EntityMocks.ROWS,
+            set = EntityMocks.SET,
+            timeToWork = 6f,
+            timeToRest = 0f,
+            onStartSet = {},
+            onNavigateBack = {}
+        )
     }
 }

@@ -1,12 +1,9 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import com.readysetmove.personalworkouts.TestStores
 import io.mockk.every
-import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
@@ -16,131 +13,88 @@ class BluetoothStoreTest {
 
     @Test
     fun theStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
-        val deviceName = "ZeeDevice"
-        val flowMock = flow {
-            emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
-            yield()
-            emit(BluetoothService.BluetoothDeviceActions.WeightChanged(1f))
-            yield()
-            emit(BluetoothService.BluetoothDeviceActions.WeightChanged(3f))
-            yield()
-            emit(BluetoothService.BluetoothDeviceActions.DisConnected(
-                BluetoothService.BluetoothException.NotConnectedException("Device shut down")))
+        TestStores(testScheduler).useBluetoothStore(
+            prepareTest = { serviceMock, deviceName ->
+                val flowMock = flow {
+                    emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
+                    yield()
+                    emit(BluetoothService.BluetoothDeviceActions.WeightChanged(1f))
+                    yield()
+                    emit(BluetoothService.BluetoothDeviceActions.WeightChanged(3f))
+                    yield()
+                    emit(BluetoothService.BluetoothDeviceActions.DisConnected(
+                        BluetoothService.BluetoothException.NotConnectedException("Device shut down")))
+                }
+                every {
+                    serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
+                } returns flowMock
+            },
+            verify = { bluetoothStates, initialState, deviceName, serviceMock ->
+                verify { serviceMock.connectToDevice(deviceName = deviceName, externalScope = any()) }
+                assertEquals(
+                    listOf(
+                        initialState,
+                        initialState.copy(scanning = true),
+                        initialState.copy(activeDevice = deviceName),
+                        initialState.copy(activeDevice = deviceName, traction = 1f),
+                        initialState.copy(activeDevice = deviceName, traction = 3f),
+                        initialState.copy(activeDevice = null, traction = 3f),
+                    ),
+                    bluetoothStates,
+                    "Check app flow"
+                )
+            },
+        ) { bluetoothStore ->
+            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
         }
-        val serviceMock = mockk<BluetoothService>()
-        every {
-            serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
-        } returns flowMock
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val initialState = BluetoothState(
-            bluetoothEnabled = true,
-            deviceName = deviceName,
-            bluetoothPermissionsGranted = true,
-        )
-        val store = BluetoothStore(
-            bluetoothService = serviceMock,
-            initialState = initialState,
-            mainDispatcher = dispatcher,
-            ioDispatcher = dispatcher,
-        )
-        val values = mutableListOf<BluetoothState>()
-        val stateGatherJob = launch(dispatcher) {
-            store.observeState().toList(values)
-        }
-        store.dispatch(BluetoothAction.ScanAndConnect)
-        stateGatherJob.cancel()
-        verify { serviceMock.connectToDevice(deviceName = deviceName, externalScope = any()) }
-        assertEquals(listOf(
-            initialState,
-            initialState.copy(scanning = true),
-            initialState.copy(activeDevice = deviceName),
-            initialState.copy(activeDevice = deviceName, traction = 1f),
-            initialState.copy(activeDevice = deviceName, traction = 3f),
-            initialState.copy(activeDevice = null, traction = 3f),
-        ),
-            values,
-            "Check app flow")
     }
 
     @Test
     fun theStoreAbortsScanningOnStopScanning() = runTest {
-        val deviceName = "ZeeDevice"
-        val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
+        TestStores(testScheduler).useBluetoothStore(
+            prepareTest = { serviceMock, deviceName ->
+                val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
+                }
+
+                every {
+                    serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
+                } returns flowMock
+            },
+            verify = { values, initialState, _, _ ->
+                assertEquals(
+                    listOf(
+                        initialState,
+                        initialState.copy(scanning = true),
+                        initialState,
+                    ),
+                    values,
+                    "Check stop scanning")
+            },
+        ) { bluetoothStore ->
+            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
+            bluetoothStore.dispatch(BluetoothAction.StopScanning)
         }
-        val serviceMock = mockk<BluetoothService>()
-        every {
-            serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
-        } returns flowMock
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val initialState = BluetoothState(
-            bluetoothEnabled = true,
-            deviceName = deviceName,
-            bluetoothPermissionsGranted = true,
-        )
-        val store = BluetoothStore(
-            bluetoothService = serviceMock,
-            initialState = initialState,
-            mainDispatcher = dispatcher,
-            ioDispatcher = dispatcher,
-        )
-        val values = mutableListOf<BluetoothState>()
-        val stateGatherJob = launch(dispatcher) {
-            store.observeState().toList(values)
-        }
-        store.dispatch(BluetoothAction.ScanAndConnect)
-        store.dispatch(BluetoothAction.StopScanning)
-        stateGatherJob.cancel()
-        assertEquals(listOf(
-            initialState,
-            initialState.copy(scanning = true),
-            initialState,
-        ),
-            values,
-            "Check stop scanning")
     }
 
     @Test
     fun theStoreCallsSetTaraAndDisconnectsOnBluetoothDisabled() = runTest {
-        val deviceName = "ZeeDevice"
-        val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
-            emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
-            yield()
+        TestStores(testScheduler).useBluetoothStore(
+            verify = { values, initialState, deviceName, serviceMock ->
+                verify { serviceMock.setTara() }
+                assertEquals(
+                    listOf(
+                        initialState,
+                        initialState.copy(scanning = true),
+                        initialState.copy(activeDevice = deviceName),
+                        initialState.copy(bluetoothEnabled = false),
+                    ),
+                    values,
+                    "Check stop scanning")
+            }
+        ) { bluetoothStore ->
+            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
+            bluetoothStore.dispatch(BluetoothAction.SetTara)
+            bluetoothStore.dispatch(BluetoothAction.SetBluetoothEnabled(false))
         }
-        val serviceMock = mockk<BluetoothService>()
-        every {
-            serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
-        } returns flowMock
-        every {
-            serviceMock.setTara()
-        } returns Unit
-        val dispatcher = UnconfinedTestDispatcher(testScheduler)
-        val initialState = BluetoothState(
-            bluetoothEnabled = true,
-            deviceName = deviceName,
-            bluetoothPermissionsGranted = true,
-        )
-        val store = BluetoothStore(
-            bluetoothService = serviceMock,
-            initialState = initialState,
-            mainDispatcher = dispatcher,
-            ioDispatcher = dispatcher,
-        )
-        val values = mutableListOf<BluetoothState>()
-        val stateGatherJob = launch(dispatcher) {
-            store.observeState().toList(values)
-        }
-        store.dispatch(BluetoothAction.ScanAndConnect)
-        store.dispatch(BluetoothAction.SetTara)
-        store.dispatch(BluetoothAction.SetBluetoothEnabled(false))
-        stateGatherJob.cancel()
-        verify { serviceMock.setTara() }
-        assertEquals(listOf(
-            initialState,
-            initialState.copy(scanning = true),
-            initialState.copy(activeDevice = deviceName),
-            initialState.copy(bluetoothEnabled = false),
-        ),
-            values,
-            "Check stop scanning")
     }
 }

@@ -21,7 +21,7 @@ import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.components.ExpandableContent
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.workout.Exercise
-import com.readysetmove.personalworkouts.workout.Mocks
+import com.readysetmove.personalworkouts.workout.EntityMocks
 import com.readysetmove.personalworkouts.workout.Workout
 
 @Composable
@@ -89,7 +89,7 @@ fun WorkoutRow(exercise: Exercise, expanded: Boolean) {
 fun PreviewWorkoutOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
-            WorkoutOverviewCard(title = "Your Workout", workout = Mocks.workout)
+            WorkoutOverviewCard(title = "Your Workout", workout = EntityMocks.WORKOUT)
         }
     }
 }
