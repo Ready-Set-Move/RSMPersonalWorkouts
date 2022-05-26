@@ -22,12 +22,14 @@ import com.readysetmove.personalworkouts.android.permissions.GrantPermissionsScr
 import com.readysetmove.personalworkouts.android.settings.SettingsScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
+import com.readysetmove.personalworkouts.app.AppAction
+import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.workout.EntityMocks
 import com.readysetmove.personalworkouts.workout.WorkoutAction
+import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
@@ -35,8 +37,11 @@ import org.koin.androidx.compose.inject
 @Composable
 fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
+    val appStore: AppStore by inject()
+    val appState = appStore.observeState().collectAsState()
     val workoutStore: WorkoutStore by inject()
     val workoutState = workoutStore.observeState().collectAsState()
+    var workoutSideEffects = workoutStore.observeSideEffect().collectAsState(null)
     val btStore: BluetoothStore by inject()
     val btState = btStore.observeState().collectAsState()
 
@@ -89,9 +94,10 @@ fun RSMNavHost(navController: NavHostController) {
         return
     }
 
-    // Simulate retrieving workout
-    LaunchedEffect(true) {
-        workoutStore.dispatch(WorkoutAction.StartWorkout(EntityMocks.WORKOUT))
+    LaunchedEffect(workoutSideEffects.value) {
+        if (workoutSideEffects.value is WorkoutSideEffect.NewWorkoutStarted) {
+            navController.navigate(WorkoutScreen.ROUTE)
+        }
     }
 
     NavHost(
@@ -104,8 +110,8 @@ fun RSMNavHost(navController: NavHostController) {
         }
         composable(route = WorkoutOverviewScreen.ROUTE) {
             WorkoutOverviewScreen(
-                workoutState.value.workoutProgress?.workout,
-                onStartWorkout = { navController.navigate(WorkoutScreen.ROUTE) }
+                appState.value.workout,
+                onStartWorkout = { appStore.dispatch(AppAction.StartWorkout) }
             )
         }
         composable(route = SettingsScreen.ROUTE) {

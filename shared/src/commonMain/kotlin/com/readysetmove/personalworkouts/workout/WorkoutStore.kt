@@ -40,7 +40,7 @@ sealed class WorkoutAction: Action {
 
 sealed class WorkoutExceptions : Exception() {
     data class EmptyWorkoutException(val workout: Workout): WorkoutExceptions()
-    data class EmptyExcerciseException(
+    data class EmptyExerciseException(
         val workout: Workout,
         val exercise: Exercise,
     ): WorkoutExceptions()
@@ -48,6 +48,12 @@ sealed class WorkoutExceptions : Exception() {
 
 sealed class WorkoutStoreExceptions : Exception() {
     object WorkoutNotSetException: WorkoutStoreExceptions()
+}
+
+sealed class WorkoutSideEffect : Effect {
+    data class Error(val error: Exception) : WorkoutSideEffect()
+    object NewWorkoutStarted : WorkoutSideEffect()
+    data class WorkoutFinished(val results: String) : WorkoutSideEffect()
 }
 
 class WorkoutStore(
@@ -94,6 +100,9 @@ class WorkoutStore(
                     timeToRest = 0,
                     tractionGoal = firstSet.tractionGoal,
                 )
+                launch {
+                    sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
+                }
             }
             is WorkoutAction.FinishExercise -> {
                 check4Workout()?.let { workoutProgress ->
@@ -171,11 +180,6 @@ class WorkoutStore(
     }
 }
 
-sealed class WorkoutSideEffect : Effect {
-    data class Error(val error: Exception) : WorkoutSideEffect()
-    data class WorkoutFinished(val results: String) : WorkoutSideEffect()
-}
-
 fun Workout.isValid(launchError: (WorkoutSideEffect.Error) -> Unit): Boolean {
     if (exercises.isEmpty()) {
         launchError(WorkoutSideEffect.Error(
@@ -186,7 +190,7 @@ fun Workout.isValid(launchError: (WorkoutSideEffect.Error) -> Unit): Boolean {
     exercises.forEach { exercise ->
         if (exercise.sets.isEmpty()) {
             launchError(WorkoutSideEffect.Error(
-                WorkoutExceptions.EmptyExcerciseException(
+                WorkoutExceptions.EmptyExerciseException(
                     workout = this,
                     exercise = exercise,
                 )

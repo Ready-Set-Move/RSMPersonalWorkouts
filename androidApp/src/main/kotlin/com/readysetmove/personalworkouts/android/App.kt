@@ -1,6 +1,7 @@
 package com.readysetmove.personalworkouts.android
 
 import android.app.Application
+import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
@@ -39,6 +40,13 @@ class App : Application() {
         }
         single {
             WorkoutStore(
+                deviceStore = get(),
+                mainDispatcher = Dispatchers.Main
+            )
+        }
+        single {
+            AppStore(
+                workoutStore = get(),
                 deviceStore = get(),
                 mainDispatcher = Dispatchers.Main
             )
