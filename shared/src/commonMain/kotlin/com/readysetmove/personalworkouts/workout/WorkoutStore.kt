@@ -1,7 +1,5 @@
 package com.readysetmove.personalworkouts.workout
 
-import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.DeviceStore
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
@@ -17,8 +15,8 @@ import kotlin.coroutines.CoroutineContext
 
 data class WorkoutProgress(
     val workout: Workout,
-    val activeExercise: Exercise,
-    val activeSet: Set,
+    val activeExercise: Int = 0,
+    val activeSet: Int = 0,
 )
 
 data class WorkoutState(
@@ -31,6 +29,7 @@ data class WorkoutState(
 
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workout: Workout): WorkoutAction()
+    object FinishSet: WorkoutAction()
     object FinishExercise: WorkoutAction()
     object StartSet: WorkoutAction()
     object StartRest: WorkoutAction()
@@ -53,12 +52,12 @@ sealed class WorkoutStoreExceptions : Exception() {
 sealed class WorkoutSideEffect : Effect {
     data class Error(val error: Exception) : WorkoutSideEffect()
     object NewWorkoutStarted : WorkoutSideEffect()
-    data class WorkoutFinished(val results: String) : WorkoutSideEffect()
+    data class SetFinished(val workoutProgress: WorkoutProgress) : WorkoutSideEffect()
+    object WorkoutFinished : WorkoutSideEffect()
 }
 
 class WorkoutStore(
     initialState: WorkoutState = WorkoutState(),
-    private val deviceStore: DeviceStore,
     private val mainDispatcher: CoroutineContext,
 ):
     Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
@@ -88,13 +87,10 @@ class WorkoutStore(
             is WorkoutAction.StartWorkout -> {
                 if (!action.workout.isValid(launchError = this::launchError)) return
 
-                val firstExercise = action.workout.exercises.first()
-                val firstSet = firstExercise.sets.first()
+                val firstSet = action.workout.exercises.first().sets.first()
                 state.value = WorkoutState(
                     workoutProgress = WorkoutProgress(
                         workout = action.workout,
-                        activeExercise = firstExercise,
-                        activeSet = firstSet,
                     ),
                     timeToWork = firstSet.duration,
                     timeToRest = 0,
@@ -107,21 +103,19 @@ class WorkoutStore(
             is WorkoutAction.FinishExercise -> {
                 check4Workout()?.let { workoutProgress ->
                     // already last exercise?
-                    if (workoutProgress.activeExercise == workoutProgress.workout.exercises.last()) {
+                    if (workoutProgress.activeExercise == workoutProgress.workout.exercises.size-1) {
                         launch {
-                            sideEffect.emit(WorkoutSideEffect.WorkoutFinished("RESULTS"))
+                            sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
                         }
                         return
                     }
 
-                    val nextExercise = workoutProgress.workout.exercises[
-                            workoutProgress.workout.exercises.indexOf(workoutProgress.activeExercise) + 1
-                        ]
-                    val activeSet = nextExercise.sets[0].copy()
+                    // starting next exercise
+                    val nextExercise = workoutProgress.activeExercise + 1
+                    val activeSet = workoutProgress.workout.exercises[nextExercise].sets[0]
                     state.value = state.value.copy(
                         workoutProgress = workoutProgress.copy(
                             activeExercise = nextExercise,
-                            activeSet = activeSet,
                         ),
                         timeToRest = 0,
                         timeToWork = activeSet.duration,
@@ -132,9 +126,7 @@ class WorkoutStore(
             is WorkoutAction.StartSet -> {
                 check4Workout()?.let { workoutProgress ->
                     state.value = state.value.copy(working = true)
-                    // Start the set and count down time TODO: start tracking when in traction range
-                    deviceStore.dispatch(DeviceAction.StartTracking)
-                    // count down work time
+                    // Start the set and count down time
                     val workTimeCountdown = launch {
                         while (state.value.timeToWork > 0) {
                             delay(TICKS)
@@ -142,8 +134,9 @@ class WorkoutStore(
                         }
                     }
                     workTimeCountdown.invokeOnCompletion {
-                        deviceStore.dispatch(DeviceAction.StopTracking)
-                        // TODO: store results
+                        launch {
+                            sideEffect.emit(WorkoutSideEffect.SetFinished(workoutProgress = workoutProgress))
+                        }
                         dispatch(WorkoutAction.StartRest)
                         state.value = state.value.copy(working = false)
                     }
@@ -152,7 +145,9 @@ class WorkoutStore(
             is WorkoutAction.StartRest -> {
                 check4Workout()?.let { workoutProgress ->
                     state.value = state.value.copy(
-                        timeToRest = workoutProgress.activeSet.restTime,
+                        timeToRest = workoutProgress.workout
+                            .exercises[workoutProgress.activeExercise]
+                            .sets[workoutProgress.activeSet].restTime,
                         timeToWork = 0,
                     )
                     val restTimeCounter = launch {
@@ -162,8 +157,23 @@ class WorkoutStore(
                         }
                     }
                     restTimeCounter.invokeOnCompletion {
-                        dispatch(WorkoutAction.FinishExercise)
+                        dispatch(WorkoutAction.FinishSet)
                     }
+                }
+            }
+            is WorkoutAction.FinishSet -> {
+                check4Workout()?.let { workoutProgress ->
+                    val nextSet = workoutProgress.activeSet + 1
+                    // was this the last set of the exercise? If so finish the exercise...
+                    if (nextSet >= workoutProgress.workout.exercises[workoutProgress.activeExercise].sets.size)
+                        dispatch(WorkoutAction.FinishExercise)
+                    // ...otherwise set active set to next set
+                    else
+                        state.value.copy(
+                            workoutProgress = workoutProgress.copy(
+                                activeSet = nextSet
+                            )
+                        )
                 }
             }
             is WorkoutAction.SetDurationGoal -> {

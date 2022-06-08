@@ -1,5 +1,7 @@
 package com.readysetmove.personalworkouts
 
+import com.readysetmove.personalworkouts.app.AppState
+import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
@@ -19,19 +21,41 @@ import kotlinx.coroutines.yield
 data class TestStores(val testScheduler: TestCoroutineScheduler)
     : CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
 
-    fun useWorkoutStore(
+    fun useAppStore(
         bluetoothStore: BluetoothStore,
+        workoutStore: WorkoutStore,
         prepareTest: () -> Unit = {},
-        verify: ((List<WorkoutState>) -> Unit)?,
-        runTest: (WorkoutStore) -> Unit,
+        verify: ((List<AppState>) -> Unit)?,
+        runTest: (AppStore) -> Unit,
     ) {
         val deviceStore = DeviceStore(
             mainDispatcher = this.coroutineContext,
             bluetoothStore = bluetoothStore,
         )
+
+        val appStore = AppStore(
+            workoutStore = workoutStore,
+            deviceStore = deviceStore,
+            mainDispatcher = this.coroutineContext,
+        )
+        val values = mutableListOf<AppState>()
+        val gatherStatesJob = if (verify != null) launch {
+            appStore.observeState().toList(values)
+        } else null
+        prepareTest()
+        runTest(appStore)
+        testScheduler.advanceUntilIdle()
+        gatherStatesJob?.cancel()
+        if (verify != null) verify(values)
+    }
+
+    fun useWorkoutStore(
+        prepareTest: () -> Unit = {},
+        verify: ((List<WorkoutState>) -> Unit)?,
+        runTest: (WorkoutStore) -> Unit,
+    ) {
         val workoutStore = WorkoutStore(
             mainDispatcher = this.coroutineContext,
-            deviceStore = deviceStore,
         )
         val values = mutableListOf<WorkoutState>()
         val gatherStatesJob = if (verify != null) launch {
