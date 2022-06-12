@@ -1,5 +1,6 @@
 package com.readysetmove.personalworkouts.workout
 
+import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
@@ -24,7 +25,9 @@ data class WorkoutState(
     val timeToWork: Long = 0,
     val timeToRest: Long = 0,
     val tractionGoal: Long? = null,
+    val durationGoal: Long? = null,
     val working: Boolean = false,
+    val startTime: Long = 0,
 ) : State
 
 fun WorkoutProgress.activeExercise(): Exercise {
@@ -56,6 +59,7 @@ sealed class WorkoutExceptions : Exception() {
 sealed class WorkoutStoreExceptions : Exception() {
     object WorkoutNotSetException: WorkoutStoreExceptions()
     object NoTractionGoalAtStartOfSetException: WorkoutExceptions()
+    object NoDurationGoalAtStartOfSetException: WorkoutExceptions()
 }
 
 sealed class WorkoutSideEffect : Effect {
@@ -67,6 +71,7 @@ sealed class WorkoutSideEffect : Effect {
 
 class WorkoutStore(
     initialState: WorkoutState = WorkoutState(),
+    private val timestampProvider: IsTimestampProvider,
     private val mainDispatcher: CoroutineContext,
 ):
     Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
@@ -106,6 +111,7 @@ class WorkoutStore(
                     timeToWork = firstSet.duration,
                     timeToRest = 0,
                     tractionGoal = firstSet.tractionGoal,
+                    durationGoal = firstSet.duration,
                 )
                 launch {
                     sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
@@ -131,22 +137,32 @@ class WorkoutStore(
                         timeToRest = 0,
                         timeToWork = nextSet.duration,
                         tractionGoal = nextSet.tractionGoal,
+                        durationGoal = nextSet.duration,
                     )
                 }
             }
             is WorkoutAction.StartSet -> {
                 check4Workout()?.let { workoutProgress ->
                     val currentTractionGoal = state.value.tractionGoal
+                    val currentDurationGoal = state.value.durationGoal
                     if (currentTractionGoal == null) {
                         launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.NoTractionGoalAtStartOfSetException))
                         return
                     }
-                    state.value = state.value.copy(working = true)
+                    if (currentDurationGoal == null) {
+                        launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.NoDurationGoalAtStartOfSetException))
+                        return
+                    }
+                    state.value = state.value.copy(
+                        working = true,
+                        startTime = timestampProvider.getTimeMillis()
+                    )
                     // Start the set and count down time
                     val workTimeCountdown = launch {
                         while (state.value.timeToWork > 0) {
                             delay(TICKS)
-                            state.value = state.value.copy(timeToWork = state.value.timeToWork - TICKS)
+                            val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
+                            state.value = state.value.copy(timeToWork = currentDurationGoal - timeDone)
                         }
                     }
                     workTimeCountdown.invokeOnCompletion {
@@ -154,6 +170,7 @@ class WorkoutStore(
                             sideEffect.emit(WorkoutSideEffect.SetFinished(
                                 workoutProgress = workoutProgress,
                                 tractionGoal = currentTractionGoal,
+                                // TODO: emit duration goal (set?)
                             ))
                         }
                         dispatch(WorkoutAction.StartRest)
@@ -166,11 +183,13 @@ class WorkoutStore(
                     state.value = state.value.copy(
                         timeToRest = workoutProgress.activeSet().restTime,
                         timeToWork = 0,
+                        startTime = timestampProvider.getTimeMillis(),
                     )
                     val restTimeCounter = launch {
                         while (state.value.timeToRest > 0) {
                             delay(TICKS)
-                            state.value = state.value.copy(timeToRest = state.value.timeToRest - TICKS)
+                            val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
+                            state.value = state.value.copy(timeToRest = workoutProgress.activeSet().restTime - timeDone)
                         }
                     }
                     restTimeCounter.invokeOnCompletion {
@@ -194,13 +213,13 @@ class WorkoutStore(
             }
             is WorkoutAction.SetDurationGoal -> {
                 if (state.value.working) return
-                check4Workout()?.let {
-                    state.value = state.value.copy(timeToWork = action.durationGoal)
-                }
+
+                state.value = state.value.copy(durationGoal = action.durationGoal)
             }
             is WorkoutAction.SetTractionGoal -> {
                 if (state.value.working) return
-                    state.value = state.value.copy(tractionGoal = action.tractionGoal)
+
+                state.value = state.value.copy(tractionGoal = action.tractionGoal)
             }
         }
     }

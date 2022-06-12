@@ -55,7 +55,8 @@ class App : Application() {
         }
         single {
             WorkoutStore(
-                mainDispatcher = Dispatchers.Main
+                timestampProvider = get(),
+                mainDispatcher = Dispatchers.Main,
             )
         }
         single {
