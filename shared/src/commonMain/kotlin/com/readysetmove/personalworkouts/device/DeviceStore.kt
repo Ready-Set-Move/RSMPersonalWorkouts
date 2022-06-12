@@ -1,6 +1,7 @@
 package com.readysetmove.personalworkouts.device
 
 import com.readysetmove.personalworkouts.IsTimestampProvider
+import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
@@ -63,6 +64,7 @@ class DeviceStore(
                 }
             }
         }
+        bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
     }
 
     override fun dispatch(action: DeviceAction) {
