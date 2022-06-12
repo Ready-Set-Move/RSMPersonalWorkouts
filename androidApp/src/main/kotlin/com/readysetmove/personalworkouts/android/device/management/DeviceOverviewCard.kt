@@ -9,9 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.device.Traction
 
 @Composable
-fun DeviceOverviewCard(deviceName: String, currentWeight: Float, trackedTractions: List<Float>, trackingActive: Boolean, onToggleTracking: () -> Unit, onSetTara: () -> Unit) {
+fun DeviceOverviewCard(deviceName: String, currentWeight: Float, trackedTractions: List<Traction>, trackingActive: Boolean, onToggleTracking: () -> Unit, onSetTara: () -> Unit) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
@@ -31,7 +32,7 @@ fun DeviceOverviewCard(deviceName: String, currentWeight: Float, trackedTraction
             }
             Spacer(Modifier.height(AppTheme.spacings.sm))
             trackedTractions.map {
-                Text(text = "$it")
+                Text(text = "${it.timestamp} - ${it.value}")
             }
         }
     }

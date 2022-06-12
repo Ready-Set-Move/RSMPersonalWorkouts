@@ -9,9 +9,10 @@ object EntityMocks {
     private val FP = Exercise(name = "Front Press", comment = "Press Cmt", sets = SHORT_SETS)
     private val DL = Exercise(name = "Deadlift", comment = "DL Cmt", sets = SHORT_SETS)
     private val SQUATS = Exercise(name = "Squats", comment = "Squats Cmt", sets = SHORT_SETS)
-    val WORKOUT = Workout(exercises = listOf(ROWS, FP, DL, SQUATS), comment = "Wkt Cmt")
+    val WORKOUT = Workout(id = "1", exercises = listOf(ROWS, FP, DL, SQUATS), comment = "Wkt Cmt")
     val ONE_SET_WORKOUT =
         Workout(
+            id = "2",
             exercises = listOf(Exercise(
                 name = "ONE SET",
                 comment = "One Set",

@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.workout.EntityMocks
 import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.workout.Set
@@ -25,7 +26,7 @@ object WorkoutScreen {
 }
 
 @Composable
-fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Long, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
+fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Long, setResults: List<Traction>?, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout__screen_title)
     Scaffold(
@@ -53,6 +54,9 @@ fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Lo
             Button(onClick = onStartSet) {
                 Text(text = "Start Set")
             }
+            setResults?.map {
+                Text(text = "${it.timestamp} - ${it.value}")
+            }
         }
     }
 }
@@ -73,7 +77,8 @@ fun PreviewWorkoutScreen() {
             timeToWork = 6000,
             timeToRest = 0,
             onStartSet = {},
-            onNavigateBack = {}
+            onNavigateBack = {},
+            setResults = emptyList()
         )
     }
 }

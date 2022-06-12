@@ -1,7 +1,9 @@
 package com.readysetmove.personalworkouts.app
 
 import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.DeviceSideEffect
+import com.readysetmove.personalworkouts.device.DeviceState
+import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
@@ -13,11 +15,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
-data class WorkoutResults(val workoutId: String, val exercises: Map<String, Map<Int, List<Float>>>)
+data class SetResult(val tractionGoal: Long, val tractions: List<Traction>)
+
+data class WorkoutResults(val workoutId: String, val exercises: Map<String, Map<Int, SetResult>>)
 
 data class AppState(
     val workout: Workout? = null,
-    val workoutResults: WorkoutResults? = null
+    val workoutResults: WorkoutResults? = null,
+    val isWaitingToHitTractionGoal: Boolean = false,
 ) : State
 
 sealed class AppAction: Action {
@@ -31,7 +36,7 @@ sealed class AppSideEffect : Effect {
 
 class AppStore(
     initialState: AppState = AppState(),
-    private val deviceStore: DeviceStore,
+    private val deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect>,
     private val workoutStore: WorkoutStore,
     private val mainDispatcher: CoroutineContext,
 ):
@@ -45,7 +50,7 @@ class AppStore(
 
     init {
         launch {
-            // TODO: here we need to fetch the workout
+            // TODO: here we need to fetch the workout via the repository
             state.value = AppState(workout = EntityMocks.WORKOUT)
         }
     }
@@ -64,51 +69,63 @@ class AppStore(
             }
             is AppAction.StartNextSet -> {
                 launch {
+                    // start tracking as soon as we have relevant traction delivered
                     deviceStore.observeState().first { deviceState ->
-                        // ensure we have a valid workout state
-                        val workoutState = workoutStore.observeState().first { workoutState ->
-                            workoutState.timeToWork > 0 && workoutState.tractionGoal != null
-                        }
-                        deviceState.traction >= workoutState.tractionGoal!!
+                        // TODO: what if we don't hit the minimal goal?
+                        deviceState.traction >= 5
                     }
-                    startTracking()
+                    workoutStore.dispatch(WorkoutAction.StartSet)
                 }
+                startTracking()
+                state.value = state.value.copy(isWaitingToHitTractionGoal = true)
             }
         }
     }
 
-    private suspend fun startTracking() {
+    private fun startTracking() {
+        launch {
+            workoutStore.observeSideEffect()
+                .filterIsInstance<WorkoutSideEffect.SetFinished>()
+                .first { setFinishedEffect ->
+                    deviceStore.dispatch(DeviceAction.StopTracking)
+                    val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
+                    val workoutResults = updateStateWithResults(
+                        tractions = stoppedState.trackedTraction,
+                        workoutProgress = setFinishedEffect.workoutProgress,
+                        tractionGoal = setFinishedEffect.tractionGoal,
+                    )
+                    storeResults(workoutResults = workoutResults)
+                    true
+                }
+        }
         deviceStore.dispatch(DeviceAction.StartTracking)
-        workoutStore.observeSideEffect()
-            .filterIsInstance<WorkoutSideEffect.SetFinished>()
-            .first { setFinishedEffect ->
-                deviceStore.dispatch(DeviceAction.StopTracking)
-                val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
-                val workoutResults = updateStateWithResults(
-                    tractions = stoppedState.trackedTraction,
-                    workoutProgress = setFinishedEffect.workoutProgress
-                )
-                storeResults(workoutResults = workoutResults)
-                true
-            }
     }
 
-    private fun updateStateWithResults(tractions: List<Float>, workoutProgress: WorkoutProgress): WorkoutResults {
-        val exercise = workoutProgress.workout.exercises[workoutProgress.activeExercise]
+    private fun updateStateWithResults(tractions: List<Traction>, tractionGoal: Long, workoutProgress: WorkoutProgress): WorkoutResults {
+        val exercise = workoutProgress.activeExercise()
         val currentWorkoutResults = state.value.workoutResults
+        // tractions need timestamps relative to beginning of first traction
+        val setStart = tractions.first().timestamp
+        val timedTractions = tractions.map {
+            it.copy(timestamp = it.timestamp - setStart)
+        }
+        val exerciseResults = mapOf(workoutProgress.activeSetIndex to SetResult(
+            tractionGoal = tractionGoal,
+            tractions = timedTractions
+        ))
         // no results yet? create everything from scratch
         if (currentWorkoutResults == null) {
-            val exerciseResults = mapOf(workoutProgress.activeSet to tractions)
             val exercises = mapOf(exercise.name to exerciseResults)
             val workoutResults = WorkoutResults(workoutProgress.workout.id, exercises = exercises)
             state.value = state.value.copy(
-                workoutResults = workoutResults
+                workoutResults = workoutResults,
+                isWaitingToHitTractionGoal = false,
             )
             return workoutResults
         }
 
         val workoutResults = currentWorkoutResults.copyWithAddedResults(
-            tractions = tractions,
+            exerciseResults = exerciseResults,
             workoutProgress = workoutProgress
         )
         state.value = state.value.copy(
@@ -123,14 +140,17 @@ class AppStore(
     }
 }
 
-fun WorkoutResults.copyWithAddedResults(tractions: List<Float>, workoutProgress: WorkoutProgress): WorkoutResults {
+fun  WorkoutResults.lastSetResult(): SetResult {
+    return exercises.values.last().values.last()
+}
+
+fun WorkoutResults.copyWithAddedResults(exerciseResults: Map<Int, SetResult>, workoutProgress: WorkoutProgress): WorkoutResults {
     // TODO: unit tests
-    val exercise = workoutProgress.workout.exercises[workoutProgress.activeExercise]
+    val exercise = workoutProgress.activeExercise()
 
     val currentExerciseResults = exercises[exercise.name]
     // no results for this exercise yet? create exercise with first set and copy other exercises
     if (currentExerciseResults == null) {
-        val exerciseResults = mapOf(workoutProgress.activeSet to tractions)
         val newExercises = mutableMapOf(exercise.name to exerciseResults)
         exercises.toMap(newExercises)
 
@@ -138,14 +158,14 @@ fun WorkoutResults.copyWithAddedResults(tractions: List<Float>, workoutProgress:
     }
 
     // copy exercises
-    val newExercises = mutableMapOf<String, Map<Int, List<Float>>>()
+    val newExercises = mutableMapOf<String, Map<Int, SetResult>>()
     exercises.toMap(newExercises)
 
     // copy sets
-    val exerciseResults = mutableMapOf(workoutProgress.activeSet to tractions)
-    currentExerciseResults.toMap(exerciseResults)
+    val newExerciseResults = exerciseResults.toMutableMap()
+    currentExerciseResults.toMap(newExerciseResults)
 
     // override current exercise
-    newExercises[exercise.name] = exerciseResults
+    newExercises[exercise.name] = newExerciseResults
     return this.copy(exercises = newExercises)
 }

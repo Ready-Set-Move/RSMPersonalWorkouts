@@ -1,11 +1,16 @@
 package com.readysetmove.personalworkouts.android
 
 import android.app.Application
+import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.DeviceAction
+import com.readysetmove.personalworkouts.device.DeviceSideEffect
+import com.readysetmove.personalworkouts.device.DeviceState
+import com.readysetmove.personalworkouts.device.MockDeviceStore
+import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
@@ -33,14 +38,23 @@ class App : Application() {
             )
         }
         single {
-            DeviceStore(
-                bluetoothStore =  get(),
-                mainDispatcher = Dispatchers.Main,
-            )
+            object: IsTimestampProvider {
+                override fun getTimeMillis(): Long {
+                    return getTimeMillis()
+                }
+            }
+        }
+        single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
+            // TODO: find a better way to switch between configurations for testing
+//            DeviceStore(
+//                bluetoothStore =  get(),
+//                mainDispatcher = Dispatchers.Main,
+//                timestampProvider = get(),
+//            )
+            MockDeviceStore()
         }
         single {
             WorkoutStore(
-                deviceStore = get(),
                 mainDispatcher = Dispatchers.Main
             )
         }
