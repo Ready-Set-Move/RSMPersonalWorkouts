@@ -5,7 +5,10 @@ import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.*
+import com.readysetmove.personalworkouts.state.Store
+import com.readysetmove.personalworkouts.workout.WorkoutAction
+import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
 import com.readysetmove.personalworkouts.workout.WorkoutState
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import io.mockk.every
@@ -22,17 +25,12 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     : CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
 
     fun useAppStore(
-        bluetoothStore: BluetoothStore,
+        deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect> = MockDeviceStore(),
         workoutStore: WorkoutStore,
         prepareTest: () -> Unit = {},
         verify: ((List<AppState>) -> Unit)?,
         runTest: (AppStore) -> Unit,
     ) {
-        val deviceStore = DeviceStore(
-            mainDispatcher = this.coroutineContext,
-            bluetoothStore = bluetoothStore,
-        )
-
         val appStore = AppStore(
             workoutStore = workoutStore,
             deviceStore = deviceStore,
@@ -49,46 +47,48 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
         if (verify != null) verify(values)
     }
 
-    fun useWorkoutStore(
+    fun useDeviceStore(
+        timestampProvider: IsTimestampProvider = MockTimestampProvider(),
+        bluetoothStore: BluetoothStore,
         prepareTest: () -> Unit = {},
-        verify: ((List<WorkoutState>) -> Unit)?,
-        runTest: (WorkoutStore) -> Unit,
+        verify: ((List<DeviceState>) -> Unit)?,
+        runTest: (DeviceStore) -> Unit,
     ) {
-        val workoutStore = WorkoutStore(
+        val deviceStore = DeviceStore(
             mainDispatcher = this.coroutineContext,
+            bluetoothStore = bluetoothStore,
+            timestampProvider = timestampProvider,
         )
-        val values = mutableListOf<WorkoutState>()
+        val values = mutableListOf<DeviceState>()
         val gatherStatesJob = if (verify != null) launch {
-            workoutStore.observeState().toList(values)
+            deviceStore.observeState().toList(values)
         } else null
         prepareTest()
-        runTest(workoutStore)
+        runTest(deviceStore)
         testScheduler.advanceUntilIdle()
         gatherStatesJob?.cancel()
         if (verify != null) verify(values)
     }
 
-    /**
-     * @param prepareTest Default behaviour sets up connection and simple setTara Mock
-     * @param verify is optional as more complex tests may not want to verify bt states
-     */
-    fun useBluetoothStore(
-        prepareTest: ((BluetoothService, String) -> Unit) = { serviceMock, deviceName ->
-            val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
-                emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
-                yield()
-            }
+    fun useWorkoutStore(
+        timestampProvider: IsTimestampProvider = MockTimestampProvider(),
+        init: StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect>.() -> Unit,
+    ): StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect> {
+        val workoutStore = WorkoutStore(
+            mainDispatcher = this.coroutineContext,
+            timestampProvider = timestampProvider
+        )
+        val storeTester = StoreTester(
+            store = workoutStore,
+            testScheduler = testScheduler,
+        )
+        storeTester.init()
+        return storeTester
+    }
 
-            every {
-                serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
-            } returns flowMock
-            every {
-                serviceMock.setTara()
-            } returns Unit
-        },
-        verify: ((List<BluetoothState>, BluetoothState, String, BluetoothService) -> Unit)? = null,
-        runTest: (BluetoothStore) -> Unit,
-    ) {
+    fun useBluetoothStore(
+        init: BluetoothStoreTester.() -> Unit,
+    ): BluetoothStoreTester {
         val deviceName = "ZeeDevice"
         val serviceMock: BluetoothService = mockk()
         val initialState = BluetoothState(
@@ -102,14 +102,31 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             mainDispatcher = this.coroutineContext,
             ioDispatcher = this.coroutineContext,
         )
-        val values = mutableListOf<BluetoothState>()
-        val gatherBluetoothStatesJob = if (verify != null) launch {
-            bluetoothStore.observeState().toList(values)
-        } else null
-        prepareTest(serviceMock, deviceName)
-        runTest(bluetoothStore)
-        gatherBluetoothStatesJob?.cancel()
-        if (verify != null) verify(values, initialState, deviceName, serviceMock)
+        val storeTester = StoreTester(
+            store = bluetoothStore,
+            testScheduler = testScheduler,
+        )
+        val bluetoothStoreTester = BluetoothStoreTester(
+            tester = storeTester,
+            deviceName = deviceName,
+            serviceMock = serviceMock,
+            initialState = initialState,
+        )
+        bluetoothStoreTester.prepare {
+            val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
+                emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
+                yield()
+            }
+
+            every {
+                serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
+            } returns flowMock
+            every {
+                serviceMock.setTara()
+            } returns Unit
+        }
+        bluetoothStoreTester.init()
+        return bluetoothStoreTester
     }
 }
 

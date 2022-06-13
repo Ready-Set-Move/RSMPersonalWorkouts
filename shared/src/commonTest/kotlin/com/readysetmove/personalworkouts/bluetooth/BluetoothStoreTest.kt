@@ -2,19 +2,17 @@ package com.readysetmove.personalworkouts.bluetooth
 
 import com.readysetmove.personalworkouts.TestStores
 import io.mockk.every
-import io.mockk.verify
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 class BluetoothStoreTest {
 
     @Test
     fun theStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
-        TestStores(testScheduler).useBluetoothStore(
-            prepareTest = { serviceMock, deviceName ->
+        TestStores(testScheduler).useBluetoothStore {
+            prepare {
                 val flowMock = flow {
                     emit(BluetoothService.BluetoothDeviceActions.Connected(deviceName))
                     yield()
@@ -28,73 +26,49 @@ class BluetoothStoreTest {
                 every {
                     serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
                 } returns flowMock
-            },
-            verify = { bluetoothStates, initialState, deviceName, serviceMock ->
-                verify { serviceMock.connectToDevice(deviceName = deviceName, externalScope = any()) }
-                assertEquals(
-                    listOf(
-                        initialState,
-                        initialState.copy(scanning = true),
-                        initialState.copy(activeDevice = deviceName),
-                        initialState.copy(activeDevice = deviceName, traction = 1f),
-                        initialState.copy(activeDevice = deviceName, traction = 3f),
-                        initialState.copy(activeDevice = null, traction = 3f),
-                    ),
-                    bluetoothStates,
-                    "Check app flow"
-                )
-            },
-        ) { bluetoothStore ->
-            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
-        }
+            }
+
+            expect { initialState }
+            dispatch { BluetoothAction.ScanAndConnect }
+            expect { initialState.copy(scanning = true) }
+            expect { initialState.copy(activeDevice = deviceName) }
+            expect { initialState.copy(activeDevice = deviceName, traction = 1f) }
+            expect { initialState.copy(activeDevice = deviceName, traction = 3f) }
+            expect { initialState.copy(activeDevice = null, traction = 3f) }
+        }.run()
     }
 
     @Test
     fun theStoreAbortsScanningOnStopScanning() = runTest {
-        TestStores(testScheduler).useBluetoothStore(
-            prepareTest = { serviceMock, deviceName ->
+        TestStores(testScheduler).useBluetoothStore {
+            prepare {
                 val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
                 }
 
                 every {
                     serviceMock.connectToDevice(deviceName = deviceName, externalScope = any())
                 } returns flowMock
-            },
-            verify = { values, initialState, _, _ ->
-                assertEquals(
-                    listOf(
-                        initialState,
-                        initialState.copy(scanning = true),
-                        initialState,
-                    ),
-                    values,
-                    "Check stop scanning")
-            },
-        ) { bluetoothStore ->
-            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
-            bluetoothStore.dispatch(BluetoothAction.StopScanning)
-        }
+            }
+
+            expect {  initialState }
+            dispatch { BluetoothAction.ScanAndConnect }
+            expect {  initialState.copy(scanning = true) }
+            dispatch { BluetoothAction.StopScanning }
+            expect { initialState }
+        }.run()
     }
 
     @Test
     fun theStoreCallsSetTaraAndDisconnectsOnBluetoothDisabled() = runTest {
-        TestStores(testScheduler).useBluetoothStore(
-            verify = { values, initialState, deviceName, serviceMock ->
-                verify { serviceMock.setTara() }
-                assertEquals(
-                    listOf(
-                        initialState,
-                        initialState.copy(scanning = true),
-                        initialState.copy(activeDevice = deviceName),
-                        initialState.copy(bluetoothEnabled = false),
-                    ),
-                    values,
-                    "Check stop scanning")
-            }
-        ) { bluetoothStore ->
-            bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
-            bluetoothStore.dispatch(BluetoothAction.SetTara)
-            bluetoothStore.dispatch(BluetoothAction.SetBluetoothEnabled(false))
-        }
+        TestStores(testScheduler).useBluetoothStore {
+            expect { initialState }
+            dispatch { BluetoothAction.ScanAndConnect }
+            expect { initialState.copy(scanning = true) }
+            expect { initialState.copy(activeDevice = deviceName) }
+            dispatch { BluetoothAction.SetTara }
+            verifyMock { serviceMock.setTara() }
+            dispatch { BluetoothAction.SetBluetoothEnabled(false) }
+            expect { initialState.copy(bluetoothEnabled = false) }
+        }.run()
     }
 }

@@ -173,8 +173,8 @@ class WorkoutStore(
                                 // TODO: emit duration goal (set?)
                             ))
                         }
-                        dispatch(WorkoutAction.StartRest)
                         state.value = state.value.copy(working = false)
+                        dispatch(WorkoutAction.StartRest)
                     }
                 }
             }

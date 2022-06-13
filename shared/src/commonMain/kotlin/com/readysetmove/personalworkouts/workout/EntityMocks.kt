@@ -16,6 +16,6 @@ object EntityMocks {
             exercises = listOf(Exercise(
                 name = "ONE SET",
                 comment = "One Set",
-                sets = listOf(Set(tractionGoal = 1337000, duration = 100, restTime = 0)))),
+                sets = listOf(Set(tractionGoal = 1337000, duration = 100, restTime = 20)))),
             comment = "Only one set")
 }
