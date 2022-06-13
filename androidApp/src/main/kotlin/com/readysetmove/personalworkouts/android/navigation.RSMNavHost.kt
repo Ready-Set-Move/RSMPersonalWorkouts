@@ -104,8 +104,7 @@ fun RSMNavHost(navController: NavHostController) {
 
     NavHost(
         navController = navController,
-        startDestination = DeviceManagementOverviewScreen.ROUTE,
-//        startDestination = WorkoutOverviewScreen.ROUTE,
+        startDestination = if(ProfileProvider.isDevMode) WorkoutOverviewScreen.ROUTE else DeviceManagementOverviewScreen.ROUTE,
     )
     {
         composable(route = GrantPermissionsScreen.ROUTE) {

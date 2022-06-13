@@ -6,10 +6,7 @@ import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.DeviceSideEffect
-import com.readysetmove.personalworkouts.device.DeviceState
-import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.*
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.Dispatchers
@@ -44,14 +41,18 @@ class App : Application() {
                 }
             }
         }
-        single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
-            // TODO: find a better way to switch between configurations for testing
-            DeviceStore(
-                bluetoothStore =  get(),
-                mainDispatcher = Dispatchers.Main,
-                timestampProvider = get(),
-            )
-//            MockDeviceStore()
+        if (ProfileProvider.isDevMode){
+            single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
+                MockDeviceStore()
+            }
+        } else {
+            single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
+                DeviceStore(
+                    bluetoothStore = get(),
+                    mainDispatcher = Dispatchers.Main,
+                    timestampProvider = get(),
+                )
+            }
         }
         single {
             WorkoutStore(
@@ -76,4 +77,5 @@ class App : Application() {
             modules(appModule)
         }
     }
+    companion object
 }
