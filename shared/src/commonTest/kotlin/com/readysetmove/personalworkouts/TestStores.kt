@@ -4,9 +4,7 @@ import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppSideEffect
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.bluetooth.BluetoothService
-import com.readysetmove.personalworkouts.bluetooth.BluetoothState
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.bluetooth.*
 import com.readysetmove.personalworkouts.device.*
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.WorkoutAction
@@ -26,7 +24,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
 
     fun useAppStore(
         deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect> = MockDeviceStore(),
-        workoutStore: WorkoutStore,
+        workoutStore: Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
         init: StoreTester<AppState, AppAction, AppSideEffect>.() -> Unit,
     ) {
         val appStore = AppStore(
@@ -44,7 +42,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
 
     fun useDeviceStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
-        bluetoothStore: BluetoothStore,
+        bluetoothStore: Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
         init: StoreTester<DeviceState, DeviceAction, DeviceSideEffect>.() -> Unit,
     ) {
         val deviceStore = DeviceStore(

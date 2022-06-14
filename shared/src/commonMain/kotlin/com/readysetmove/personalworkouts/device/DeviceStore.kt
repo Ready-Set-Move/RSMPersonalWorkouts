@@ -2,7 +2,8 @@ package com.readysetmove.personalworkouts.device
 
 import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
+import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
@@ -31,7 +32,7 @@ sealed class DeviceSideEffect : Effect {
 }
 
 class DeviceStore(
-    private val bluetoothStore: BluetoothStore,
+    private val bluetoothStore: Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
     private val mainDispatcher: CoroutineContext,
     private val timestampProvider: IsTimestampProvider,
 ):

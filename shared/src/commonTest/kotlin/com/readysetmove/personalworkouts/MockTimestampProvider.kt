@@ -1,9 +1,8 @@
 package com.readysetmove.personalworkouts
 
-class MockTimestampProvider(timestamps: LongProgression = 0..1000L step 100): IsTimestampProvider {
-    private val _timestamps = timestamps.iterator()
+class MockTimestampProvider(val timestamps: ArrayDeque<Long> = ArrayDeque()): IsTimestampProvider {
 
     override fun getTimeMillis(): Long {
-        return _timestamps.next()
+        return timestamps.removeFirst()
     }
 }

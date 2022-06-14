@@ -2,8 +2,10 @@ package com.readysetmove.personalworkouts.workout
 
 class ExerciseBuilder(val name: String, val comment: String) {
     val sets = mutableListOf<Set>()
-    fun set(set: Set) {
-        sets.add(set)
+    fun set(set: Set, repeat: Int = 1) {
+        (1..repeat).forEach { _ ->
+            sets.add(set.copy())
+        }
     }
 
     fun build(): Exercise {

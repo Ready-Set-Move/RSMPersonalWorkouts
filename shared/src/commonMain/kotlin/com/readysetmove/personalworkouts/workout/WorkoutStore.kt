@@ -133,6 +133,7 @@ class WorkoutStore(
                     state.value = state.value.copy(
                         workoutProgress = workoutProgress.copy(
                             activeExerciseIndex = nextExerciseIndex,
+                            activeSetIndex = 0,
                         ),
                         timeToRest = 0,
                         timeToWork = nextSet.duration,
@@ -162,7 +163,8 @@ class WorkoutStore(
                         while (state.value.timeToWork > 0) {
                             delay(TICKS)
                             val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                            state.value = state.value.copy(timeToWork = currentDurationGoal - timeDone)
+                            val timeToWork = currentDurationGoal - timeDone
+                            state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
                         }
                     }
                     workTimeCountdown.invokeOnCompletion {
@@ -189,7 +191,8 @@ class WorkoutStore(
                         while (state.value.timeToRest > 0) {
                             delay(TICKS)
                             val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                            state.value = state.value.copy(timeToRest = workoutProgress.activeSet().restTime - timeDone)
+                            val timeToRest = workoutProgress.activeSet().restTime - timeDone
+                            state.value = state.value.copy(timeToRest = if(timeToRest > 0) timeToRest else 0)
                         }
                     }
                     restTimeCounter.invokeOnCompletion {
@@ -203,12 +206,19 @@ class WorkoutStore(
                     if (workoutProgress.activeSet() == workoutProgress.activeExercise().sets.last())
                         dispatch(WorkoutAction.FinishExercise)
                     // ...otherwise set active set to next set
-                    else
-                        state.value.copy(
-                            workoutProgress = workoutProgress.copy(
-                                activeSetIndex = workoutProgress.activeSetIndex + 1
-                            )
+                    else {
+                        val newWorkoutProgress = workoutProgress.copy(
+                            activeSetIndex = workoutProgress.activeSetIndex + 1
                         )
+                        val nextSet = newWorkoutProgress.activeSet()
+                        state.value = state.value.copy(
+                            workoutProgress = newWorkoutProgress,
+                            timeToRest = 0,
+                            timeToWork = nextSet.duration,
+                            tractionGoal = nextSet.tractionGoal,
+                            durationGoal = nextSet.duration
+                        )
+                    }
                 }
             }
             is WorkoutAction.SetDurationGoal -> {

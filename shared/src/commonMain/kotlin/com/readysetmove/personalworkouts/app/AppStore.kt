@@ -37,7 +37,7 @@ sealed class AppSideEffect : Effect {
 class AppStore(
     initialState: AppState = AppState(),
     private val deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect>,
-    private val workoutStore: WorkoutStore,
+    private val workoutStore: Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
     private val mainDispatcher: CoroutineContext,
 ):
     Store<AppState, AppAction, AppSideEffect>,
