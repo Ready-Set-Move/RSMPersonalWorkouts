@@ -1,5 +1,7 @@
 package com.readysetmove.personalworkouts
 
+import com.readysetmove.personalworkouts.app.AppAction
+import com.readysetmove.personalworkouts.app.AppSideEffect
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService
@@ -15,8 +17,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.yield
@@ -27,53 +27,43 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     fun useAppStore(
         deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect> = MockDeviceStore(),
         workoutStore: WorkoutStore,
-        prepareTest: () -> Unit = {},
-        verify: ((List<AppState>) -> Unit)?,
-        runTest: (AppStore) -> Unit,
+        init: StoreTester<AppState, AppAction, AppSideEffect>.() -> Unit,
     ) {
         val appStore = AppStore(
             workoutStore = workoutStore,
             deviceStore = deviceStore,
             mainDispatcher = this.coroutineContext,
         )
-        val values = mutableListOf<AppState>()
-        val gatherStatesJob = if (verify != null) launch {
-            appStore.observeState().toList(values)
-        } else null
-        prepareTest()
-        runTest(appStore)
-        testScheduler.advanceUntilIdle()
-        gatherStatesJob?.cancel()
-        if (verify != null) verify(values)
+        val storeTester = StoreTester(
+            store = appStore,
+            testScheduler = testScheduler,
+        )
+        storeTester.init()
+        storeTester.run()
     }
 
     fun useDeviceStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
         bluetoothStore: BluetoothStore,
-        prepareTest: () -> Unit = {},
-        verify: ((List<DeviceState>) -> Unit)?,
-        runTest: (DeviceStore) -> Unit,
+        init: StoreTester<DeviceState, DeviceAction, DeviceSideEffect>.() -> Unit,
     ) {
         val deviceStore = DeviceStore(
             mainDispatcher = this.coroutineContext,
             bluetoothStore = bluetoothStore,
             timestampProvider = timestampProvider,
         )
-        val values = mutableListOf<DeviceState>()
-        val gatherStatesJob = if (verify != null) launch {
-            deviceStore.observeState().toList(values)
-        } else null
-        prepareTest()
-        runTest(deviceStore)
-        testScheduler.advanceUntilIdle()
-        gatherStatesJob?.cancel()
-        if (verify != null) verify(values)
+        val storeTester = StoreTester(
+            store = deviceStore,
+            testScheduler = testScheduler,
+        )
+        storeTester.init()
+        storeTester.run()
     }
 
     fun useWorkoutStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
         init: StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect>.() -> Unit,
-    ): StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect> {
+    ) {
         val workoutStore = WorkoutStore(
             mainDispatcher = this.coroutineContext,
             timestampProvider = timestampProvider
@@ -83,12 +73,12 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             testScheduler = testScheduler,
         )
         storeTester.init()
-        return storeTester
+        storeTester.run()
     }
 
     fun useBluetoothStore(
         init: BluetoothStoreTester.() -> Unit,
-    ): BluetoothStoreTester {
+    ) {
         val deviceName = "ZeeDevice"
         val serviceMock: BluetoothService = mockk()
         val initialState = BluetoothState(
@@ -126,7 +116,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             } returns Unit
         }
         bluetoothStoreTester.init()
-        return bluetoothStoreTester
+        storeTester.run()
     }
 }
 

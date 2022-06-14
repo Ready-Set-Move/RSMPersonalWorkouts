@@ -35,7 +35,7 @@ class BluetoothStoreTest {
             expect { initialState.copy(activeDevice = deviceName, traction = 1f) }
             expect { initialState.copy(activeDevice = deviceName, traction = 3f) }
             expect { initialState.copy(activeDevice = null, traction = 3f) }
-        }.run()
+        }
     }
 
     @Test
@@ -55,7 +55,7 @@ class BluetoothStoreTest {
             expect {  initialState.copy(scanning = true) }
             dispatch { BluetoothAction.StopScanning }
             expect { initialState }
-        }.run()
+        }
     }
 
     @Test
@@ -69,6 +69,6 @@ class BluetoothStoreTest {
             verifyMock { serviceMock.setTara() }
             dispatch { BluetoothAction.SetBluetoothEnabled(false) }
             expect { initialState.copy(bluetoothEnabled = false) }
-        }.run()
+        }
     }
 }
