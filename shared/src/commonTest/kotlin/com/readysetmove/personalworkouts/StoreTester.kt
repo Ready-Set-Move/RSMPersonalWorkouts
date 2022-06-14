@@ -42,7 +42,7 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
         verifys.add(verifyFun)
     }
 
-    override fun run(initialState: StateType?): StateType {
+    override fun run(initialState: StateType?): StateType? {
         val values = mutableListOf<StateType>()
         val gatherStatesJob = if (expects.isNotEmpty()) launch {
             store.observeState().toList(values)
@@ -67,11 +67,11 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
         verifys.forEach {
             verify { it() }
         }
-        var lastState = expects.last()
+        var lastState = if (expects.isNotEmpty()) expects.last() else null
         steps.forEach {
             lastState = it.run(lastState)
         }
-        return expects.last()
+        return lastState
     }
 
     override fun step(stepMessage: String, buildStep: IsStoreTester<StateType, ActionType, EffectType>.() -> Unit) {

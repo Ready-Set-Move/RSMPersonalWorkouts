@@ -18,5 +18,5 @@ interface IsStoreTester<StateType: State, ActionType: Action, EffectType: Effect
 
     fun verifyMock(verifyFun: () -> Unit)
 
-    fun run(initialState: StateType? = null): StateType
+    fun run(initialState: StateType? = null): StateType?
 }
