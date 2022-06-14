@@ -26,7 +26,16 @@ object WorkoutScreen {
 }
 
 @Composable
-fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Long, setResults: List<Traction>?, onStartSet: () -> Unit, onNavigateBack: () -> Unit) {
+fun WorkoutScreen(
+    exercise: Exercise,
+    set: Set,
+    timeToWork: Long,
+    timeToRest: Long,
+    setInProgress: Boolean = false,
+    latestTractions: List<Traction>?,
+    onStartSet: () -> Unit,
+    onNavigateBack: () -> Unit
+) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout__screen_title)
     Scaffold(
@@ -51,10 +60,10 @@ fun WorkoutScreen(exercise: Exercise, set: Set, timeToWork: Long, timeToRest: Lo
             Text(text = "Weight: ${set.tractionGoal/1000} kg")
             Text(text = "Work: ${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)} s")
             Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
-            Button(onClick = onStartSet) {
+            Button(onClick = onStartSet, enabled = !setInProgress) {
                 Text(text = "Start Set")
             }
-            setResults?.map {
+            latestTractions?.map {
                 Text(text = "${it.timestamp} - ${it.value}")
             }
         }
@@ -78,7 +87,7 @@ fun PreviewWorkoutScreen() {
             timeToRest = 0,
             onStartSet = {},
             onNavigateBack = {},
-            setResults = emptyList()
+            latestTractions = emptyList()
         )
     }
 }

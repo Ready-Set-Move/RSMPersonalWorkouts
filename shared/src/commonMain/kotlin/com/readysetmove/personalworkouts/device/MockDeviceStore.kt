@@ -1,12 +1,11 @@
 package com.readysetmove.personalworkouts.device
 
-import com.readysetmove.personalworkouts.state.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class MockDeviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect> {
+class MockDeviceStore: IsDeviceStore {
     private val state = MutableStateFlow(DeviceState())
     private val sideEffect = MutableSharedFlow<DeviceSideEffect>()
 

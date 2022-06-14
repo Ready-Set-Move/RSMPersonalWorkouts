@@ -1,8 +1,7 @@
 package com.readysetmove.personalworkouts.app
 
 import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.DeviceSideEffect
-import com.readysetmove.personalworkouts.device.DeviceState
+import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
@@ -23,6 +22,7 @@ data class AppState(
     val workout: Workout? = null,
     val workoutResults: WorkoutResults? = null,
     val isWaitingToHitTractionGoal: Boolean = false,
+    val latestSetResult: SetResult? = null,
 ) : State
 
 sealed class AppAction: Action {
@@ -36,8 +36,8 @@ sealed class AppSideEffect : Effect {
 
 class AppStore(
     initialState: AppState = AppState(),
-    private val deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect>,
-    private val workoutStore: Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
+    private val deviceStore: IsDeviceStore,
+    private val workoutStore: WorkoutStore,
     private val mainDispatcher: CoroutineContext,
 ):
     Store<AppState, AppAction, AppSideEffect>,
@@ -51,7 +51,17 @@ class AppStore(
     init {
         launch {
             // TODO: here we need to fetch the workout via the repository
-            state.value = AppState(workout = EntityMocks.WORKOUT)
+            state.value = AppState(workout = WorkoutBuilder.workout {
+                exercise("Rows") {
+                    set(Set(50, restTime = 2000), repeat = 2)
+                }
+                exercise("DL") {
+                    set(Set(100, restTime = 2000))
+                }
+                exercise("FP") {
+                    set(Set(30, restTime = 2000))
+                }
+            })
         }
     }
 
@@ -109,10 +119,11 @@ class AppStore(
         val timedTractions = tractions.map {
             it.copy(timestamp = it.timestamp - setStart)
         }
-        val exerciseResults = mapOf(workoutProgress.activeSetIndex to SetResult(
+        val setResult = SetResult(
             tractionGoal = tractionGoal,
             tractions = timedTractions
-        ))
+        )
+        val exerciseResults = mapOf(workoutProgress.activeSetIndex to setResult)
         // no results yet? create everything from scratch
         if (currentWorkoutResults == null) {
             val exercises = mapOf(exercise.name to exerciseResults)
@@ -120,6 +131,7 @@ class AppStore(
             state.value = state.value.copy(
                 workoutResults = workoutResults,
                 isWaitingToHitTractionGoal = false,
+                latestSetResult = setResult,
             )
             return workoutResults
         }
@@ -129,7 +141,9 @@ class AppStore(
             workoutProgress = workoutProgress
         )
         state.value = state.value.copy(
-            workoutResults = workoutResults
+            workoutResults = workoutResults,
+            isWaitingToHitTractionGoal = false,
+            latestSetResult = setResult,
         )
         return workoutResults
     }
@@ -138,10 +152,6 @@ class AppStore(
         // TODO: store results if possible move to repository
         delay(10)
     }
-}
-
-fun  WorkoutResults.lastSetResult(): SetResult {
-    return exercises.values.last().values.last()
 }
 
 fun WorkoutResults.copyWithAddedResults(exerciseResults: Map<Int, SetResult>, workoutProgress: WorkoutProgress): WorkoutResults {

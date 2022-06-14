@@ -24,7 +24,6 @@ import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
 import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.app.lastSetResult
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
@@ -132,7 +131,10 @@ fun RSMNavHost(navController: NavHostController) {
                 timeToRest = workoutState.value.timeToRest,
                 onStartSet = { appStore.dispatch(AppAction.StartNextSet) },
                 onNavigateBack = { navController.popBackStack() },
-                setResults = appState.value.workoutResults?.lastSetResult()?.tractions,
+                latestTractions = appState.value.latestSetResult?.tractions,
+                setInProgress = workoutState.value.working
+                        || workoutState.value.timeToRest > 0
+                        || appState.value.isWaitingToHitTractionGoal
             )
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {

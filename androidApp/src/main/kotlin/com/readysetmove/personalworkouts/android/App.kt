@@ -6,8 +6,9 @@ import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.*
-import com.readysetmove.personalworkouts.state.Store
+import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.IsDeviceStore
+import com.readysetmove.personalworkouts.device.MockDeviceStore
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
@@ -42,11 +43,11 @@ class App : Application() {
             }
         }
         if (ProfileProvider.isDevMode){
-            single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
+            single<IsDeviceStore> {
                 MockDeviceStore()
             }
         } else {
-            single<Store<DeviceState, DeviceAction, DeviceSideEffect>> {
+            single<IsDeviceStore> {
                 DeviceStore(
                     bluetoothStore = get(),
                     mainDispatcher = Dispatchers.Main,

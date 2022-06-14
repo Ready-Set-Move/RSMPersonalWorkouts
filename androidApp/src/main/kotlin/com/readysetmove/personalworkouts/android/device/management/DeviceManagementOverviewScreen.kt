@@ -25,9 +25,7 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.DeviceSideEffect
-import com.readysetmove.personalworkouts.device.DeviceState
-import com.readysetmove.personalworkouts.state.Store
+import com.readysetmove.personalworkouts.device.IsDeviceStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.androidx.compose.get
 
@@ -37,7 +35,7 @@ object DeviceManagementOverviewScreen {
 }
 
 @Composable
-fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: Store<DeviceState, DeviceAction, DeviceSideEffect> = get(), onNavigateBack: () -> Unit) {
+fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: IsDeviceStore = get(), onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
     val state = store.observeState().collectAsState()
