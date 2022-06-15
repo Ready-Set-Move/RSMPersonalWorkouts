@@ -55,6 +55,7 @@ class WorkoutStoreTest {
             exercise("Rows") {
                 set(Set(10, 15000, 5000))
                 set(Set(40))
+                set(Set(40))
             }
             exercise("DL") {
                 set(Set(30, 15000))
@@ -76,7 +77,6 @@ class WorkoutStoreTest {
                 timeToWork = 15000,
             ) }
             step("Runs the first set of the first exercise") {
-                /** Set start */
                 dispatch { WorkoutAction.StartSet }
                 /* start working */
                 currentState = expect { currentState.copy(
@@ -120,7 +120,6 @@ class WorkoutStoreTest {
                 ) }
             }
             step("Runs the second set of the first exercise") {
-                /** Set 2 start */
                 timestampProvider.timestamps.add(30000)
                 dispatch { WorkoutAction.StartSet }
                 /* start working */
@@ -135,6 +134,53 @@ class WorkoutStoreTest {
                 ) }
                 // one timestamp 2s after set end
                 timestampProvider.timestamps.add(38000)
+                currentState = expect { currentState.copy(
+                    timeToWork = 0,
+                ) }
+                currentState = expect { currentState.copy(
+                    working = false,
+                ) }
+                /* start rest */
+                timestampProvider.timestamps.add(51000)
+                currentState = expect { currentState.copy(
+                    startTime = 51000,
+                    timeToRest = 30000,
+                ) }
+                // one timestamp 10s before rest end
+                timestampProvider.timestamps.add(71000)
+                currentState = expect { currentState.copy(
+                    timeToRest = 10000,
+                ) }
+                // one timestamp 1s after rest end
+                timestampProvider.timestamps.add(82000)
+                currentState = expect { currentState.copy(
+                    timeToRest = 0,
+                ) }
+
+                currentState = expect { currentState.copy(
+                    workoutProgress = workoutStartProgress.copy(
+                        activeSetIndex = 2,
+                    ),
+                    durationGoal = 6000,
+                    tractionGoal = 40,
+                    timeToWork = 6000,
+                ) }
+            }
+            step("Runs the third set of the first exercise") {
+                timestampProvider.timestamps.add(40000)
+                dispatch { WorkoutAction.StartSet }
+                /* start working */
+                currentState = expect { currentState.copy(
+                    working = true,
+                    startTime = 40000,
+                ) }
+                // one timestamp 3s before set end
+                timestampProvider.timestamps.add(43000)
+                currentState = expect { currentState.copy(
+                    timeToWork = 3000,
+                ) }
+                // one timestamp 2s after set end
+                timestampProvider.timestamps.add(48000)
                 currentState = expect { currentState.copy(
                     timeToWork = 0,
                 ) }

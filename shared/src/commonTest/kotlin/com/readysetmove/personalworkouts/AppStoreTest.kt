@@ -20,14 +20,14 @@ class AppStoreTest {
                 set(Set(tractionGoal, setDuration, setRestTime))
             }
         }
-        stores.useWorkoutStore {
-            stores.useBluetoothStore {
+        stores.useWorkoutStore { workoutStore ->
+            stores.useBluetoothStore { bluetoothStore ->
                 stores.useDeviceStore(
-                    bluetoothStore = store,
-                ) {
+                    bluetoothStore = bluetoothStore,
+                ) { deviceStore ->
                     stores.useAppStore(
-                        deviceStore = store,
-                        workoutStore = this@useWorkoutStore.store
+                        deviceStore = deviceStore,
+                        workoutStore = workoutStore
                     ) {
                         // TODO: wire with repo and ktor mock to yield correct Workout for testing
                         dispatch { AppAction.StartWorkout }

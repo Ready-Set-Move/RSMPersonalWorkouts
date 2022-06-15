@@ -57,10 +57,10 @@ fun WorkoutScreen(
             .verticalScroll(scrollState)
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
-            Text(text = exercise.name)
-            Text(text = "%.1f".format(currentLoad), style = AppTheme.typography.h1)
+            Text(text = exercise.name, style = AppTheme.typography.h3)
             Text(text = "Goal: ${set.tractionGoal/1000} kg")
-            Text(text = "Work: ${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)} s")
+            Text(text = "%.1f".format(currentLoad-set.tractionGoal/1000), style = AppTheme.typography.h1)
+            Text(text = "${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)}s", style = AppTheme.typography.h1)
             Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
             Button(onClick = onStartSet, enabled = !setInProgress) {
                 Text(text = "Start Set")

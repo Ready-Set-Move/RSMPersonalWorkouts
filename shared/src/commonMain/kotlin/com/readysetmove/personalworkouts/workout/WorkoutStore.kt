@@ -120,7 +120,7 @@ class WorkoutStore(
             is WorkoutAction.FinishExercise -> {
                 check4Workout()?.let { workoutProgress ->
                     // already last exercise?
-                    if (workoutProgress.activeExercise() == workoutProgress.workout.exercises.last()) {
+                    if (workoutProgress.activeExercise() === workoutProgress.workout.exercises.last()) {
                         launch {
                             sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
                         }
@@ -203,7 +203,7 @@ class WorkoutStore(
             is WorkoutAction.FinishSet -> {
                 check4Workout()?.let { workoutProgress ->
                     // was this the last set of the exercise? If so finish the exercise...
-                    if (workoutProgress.activeSet() == workoutProgress.activeExercise().sets.last())
+                    if (workoutProgress.activeSet() === workoutProgress.activeExercise().sets.last())
                         dispatch(WorkoutAction.FinishExercise)
                     // ...otherwise set active set to next set
                     else {

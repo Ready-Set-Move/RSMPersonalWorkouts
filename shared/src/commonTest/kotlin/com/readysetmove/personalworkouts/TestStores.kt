@@ -4,13 +4,11 @@ import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppSideEffect
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.bluetooth.*
+import com.readysetmove.personalworkouts.bluetooth.BluetoothService
+import com.readysetmove.personalworkouts.bluetooth.BluetoothState
+import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.*
-import com.readysetmove.personalworkouts.state.Store
-import com.readysetmove.personalworkouts.workout.WorkoutAction
-import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
-import com.readysetmove.personalworkouts.workout.WorkoutState
-import com.readysetmove.personalworkouts.workout.WorkoutStore
+import com.readysetmove.personalworkouts.workout.*
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +29,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             workoutStore = workoutStore,
             deviceStore = deviceStore,
             mainDispatcher = this.coroutineContext,
+            workoutRepository = WorkoutRepository(),
         )
         val storeTester = StoreTester(
             store = appStore,
@@ -42,8 +41,8 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
 
     fun useDeviceStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
-        bluetoothStore: Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
-        init: StoreTester<DeviceState, DeviceAction, DeviceSideEffect>.() -> Unit,
+        bluetoothStore: BluetoothStore,
+        init: StoreTester<DeviceState, DeviceAction, DeviceSideEffect>.(deviceStore: IsDeviceStore) -> Unit,
     ) {
         val deviceStore = DeviceStore(
             mainDispatcher = this.coroutineContext,
@@ -54,13 +53,13 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             store = deviceStore,
             testScheduler = testScheduler,
         )
-        storeTester.init()
+        storeTester.init(deviceStore)
         storeTester.run()
     }
 
     fun useWorkoutStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
-        init: StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect>.() -> Unit,
+        init: StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect>.(workoutStore: WorkoutStore) -> Unit,
     ) {
         val workoutStore = WorkoutStore(
             mainDispatcher = this.coroutineContext,
@@ -70,12 +69,12 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             store = workoutStore,
             testScheduler = testScheduler,
         )
-        storeTester.init()
+        storeTester.init(workoutStore)
         storeTester.run()
     }
 
     fun useBluetoothStore(
-        init: BluetoothStoreTester.() -> Unit,
+        init: BluetoothStoreTester.(bluetoothStore: BluetoothStore) -> Unit,
     ) {
         val deviceName = "ZeeDevice"
         val serviceMock: BluetoothService = mockk()
@@ -113,7 +112,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
                 serviceMock.setTara()
             } returns Unit
         }
-        bluetoothStoreTester.init()
+        bluetoothStoreTester.init(bluetoothStore)
         storeTester.run()
     }
 }
