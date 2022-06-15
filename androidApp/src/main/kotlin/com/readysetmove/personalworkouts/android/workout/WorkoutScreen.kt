@@ -65,6 +65,7 @@ fun WorkoutScreen(
             Button(onClick = onStartSet, enabled = !setInProgress) {
                 Text(text = "Start Set")
             }
+            Text(text = "Max: %.1f".format(latestTractions?.maxByOrNull { it.value }?.value ?: 0.0))
             latestTractions?.map {
                 Text(text = "%.1f".format(it.value))
             }
