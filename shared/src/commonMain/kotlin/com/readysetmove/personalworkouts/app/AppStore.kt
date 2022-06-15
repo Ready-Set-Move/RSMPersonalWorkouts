@@ -19,6 +19,7 @@ data class SetResult(val tractionGoal: Long, val tractions: List<Traction>)
 data class WorkoutResults(val workoutId: String, val exercises: Map<String, Map<Int, SetResult>>)
 
 data class AppState(
+    val userId: String? = null,
     val workout: Workout? = null,
     val workoutResults: WorkoutResults? = null,
     val isWaitingToHitTractionGoal: Boolean = false,
@@ -26,6 +27,7 @@ data class AppState(
 ) : State
 
 sealed class AppAction: Action {
+    data class SetUser(val userId: String): AppAction()
     object StartWorkout: AppAction()
     object StartNextSet: AppAction()
 }
@@ -36,6 +38,7 @@ sealed class AppSideEffect : Effect {
 
 class AppStore(
     initialState: AppState = AppState(),
+    private val workoutRepository: IsWorkoutRepository,
     private val deviceStore: IsDeviceStore,
     private val workoutStore: WorkoutStore,
     private val mainDispatcher: CoroutineContext,
@@ -48,25 +51,21 @@ class AppStore(
     override fun observeState(): StateFlow<AppState> = state
     override fun observeSideEffect(): Flow<AppSideEffect> = sideEffect
 
-    init {
-        launch {
-            // TODO: here we need to fetch the workout via the repository
-            state.value = AppState(workout = WorkoutBuilder.workout {
-                exercise("Rows") {
-                    set(Set(50, restTime = 2000), repeat = 2)
-                }
-                exercise("DL") {
-                    set(Set(100, restTime = 2000))
-                }
-                exercise("FP") {
-                    set(Set(30, restTime = 2000))
-                }
-            })
-        }
-    }
-
     override fun dispatch(action: AppAction) {
         when(action) {
+            is AppAction.SetUser -> {
+                if (state.value.userId == action.userId) return
+
+                state.value = AppState(userId = action.userId)
+                launch {
+                    // TODO: error handling: reset userId and throw error
+                    val workout = workoutRepository.fetchLatestWorkoutForUser(action.userId)
+                    // still the same user set?
+                    if (state.value.userId == action.userId) {
+                        state.value = state.value.copy(workout = workout)
+                    }
+                }
+            }
             is AppAction.StartWorkout -> {
                 val workout = state.value.workout
                 if (workout == null) {

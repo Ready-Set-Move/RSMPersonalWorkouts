@@ -28,6 +28,7 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import com.readysetmove.personalworkouts.workout.activeExercise
@@ -40,11 +41,17 @@ fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
     val appStore: AppStore by inject()
     val appState = appStore.observeState().collectAsState()
+    val deviceStore: IsDeviceStore by inject()
+    val deviceState = deviceStore.observeState().collectAsState()
     val workoutStore: WorkoutStore by inject()
     val workoutState = workoutStore.observeState().collectAsState()
     val workoutSideEffects = workoutStore.observeSideEffect().collectAsState(null)
     val btStore: BluetoothStore by inject()
     val btState = btStore.observeState().collectAsState()
+
+    LaunchedEffect(true) {
+        appStore.dispatch(AppAction.SetUser(userId = "Flo"))
+    }
 
     val bluetoothAdapter: BluetoothAdapter by remember {
         val bluetoothManager =
@@ -127,6 +134,7 @@ fun RSMNavHost(navController: NavHostController) {
             WorkoutScreen(
                 exercise = workoutProgress.activeExercise(),
                 set = workoutProgress.activeSet(),
+                currentLoad = deviceState.value.traction,
                 timeToWork = workoutState.value.timeToWork,
                 timeToRest = workoutState.value.timeToRest,
                 onStartSet = { appStore.dispatch(AppAction.StartNextSet) },
