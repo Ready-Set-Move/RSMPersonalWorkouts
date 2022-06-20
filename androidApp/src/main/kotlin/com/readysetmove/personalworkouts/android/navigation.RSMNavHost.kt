@@ -50,7 +50,7 @@ fun RSMNavHost(navController: NavHostController) {
     val btState = btStore.observeState().collectAsState()
 
     LaunchedEffect(true) {
-        appStore.dispatch(AppAction.SetUser(userId = "Jose"))
+        appStore.dispatch(AppAction.SetUser(userId = "Alex"))
     }
 
     val bluetoothAdapter: BluetoothAdapter by remember {

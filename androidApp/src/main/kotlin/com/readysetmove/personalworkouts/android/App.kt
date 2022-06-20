@@ -49,7 +49,7 @@ class App : Application() {
         }
         if (ProfileProvider.isDevMode){
             single<IsDeviceStore> {
-                MockDeviceStore()
+                MockDeviceStore(mainDispatcher = Dispatchers.Main)
             }
         } else {
             single<IsDeviceStore> {

@@ -8,6 +8,7 @@ import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.*
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -34,6 +35,7 @@ sealed class AppAction: Action {
 
 sealed class AppSideEffect : Effect {
     object NoWorkoutSet : AppSideEffect()
+    object NoSetInProgress : AppSideEffect()
 }
 
 class AppStore(
@@ -51,17 +53,32 @@ class AppStore(
     override fun observeState(): StateFlow<AppState> = state
     override fun observeSideEffect(): Flow<AppSideEffect> = sideEffect
 
+    private val tag = "AppStore"
+
+    private var workoutState: WorkoutState? = null
+
+    init {
+        launch {
+            workoutStore.observeState().collect {
+                workoutState = it
+            }
+        }
+    }
+
     override fun dispatch(action: AppAction) {
         when(action) {
             is AppAction.SetUser -> {
                 if (state.value.userId == action.userId) return
 
+                Napier.d("New user id received: ${action.userId} updating state", tag = tag)
                 state.value = AppState(userId = action.userId)
                 launch {
+                    Napier.d("Starting side effect to fetch workout for user: ${action.userId}", tag = tag)
                     // TODO: error handling: reset userId and throw error
                     val workout = workoutRepository.fetchLatestWorkoutForUser(action.userId)
                     // still the same user set?
                     if (state.value.userId == action.userId) {
+                        Napier.d("Updating state with new workout $workout for user: ${action.userId}", tag = tag)
                         state.value = state.value.copy(workout = workout)
                     }
                 }
@@ -77,11 +94,21 @@ class AppStore(
                 workoutStore.dispatch(WorkoutAction.StartWorkout(workout))
             }
             is AppAction.StartNextSet -> {
+                val currentTractionGoal = workoutState?.workoutProgress?.activeSet()?.tractionGoal
+                if (currentTractionGoal == null) {
+                    launch {
+                        sideEffect.emit(AppSideEffect.NoSetInProgress)
+                    }
+                    return
+                }
                 launch {
+                    // handle max sets with 0 weight starting at 5
+                    val tractionGoalThreshold = if(currentTractionGoal>0f) currentTractionGoal*.8f else 5f
                     // start tracking as soon as we have relevant traction delivered
                     deviceStore.observeState().first { deviceState ->
+                        // start countdown and tracking as soon as we hit relevant weight
                         // TODO: what if we don't hit the minimal goal?
-                        deviceState.traction >= 5
+                        deviceState.traction*1000 >= tractionGoalThreshold
                     }
                     workoutStore.dispatch(WorkoutAction.StartSet)
                 }

@@ -2,6 +2,7 @@
 kotlinx-coroutines = "1.6.1-native-mt"
 koin = "3.2.0-beta-1"
 mockk = "1.12.4"
+napier = "1.4.1"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -11,3 +12,4 @@ koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-androidx = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+napier = { module = "io.github.aakira:napier", version.ref = "napier" }

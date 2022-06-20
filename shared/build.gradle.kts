@@ -30,6 +30,8 @@ kotlin {
             dependencies {
                 //Coroutines
                 implementation(libs.kotlinx.coroutines.core)
+                // Napier logging
+                implementation(libs.napier)
             }
         }
         val commonTest by getting {
