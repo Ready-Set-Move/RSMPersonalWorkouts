@@ -2,6 +2,27 @@ package com.readysetmove.personalworkouts.workout
 
 class ExerciseBuilder(val name: String, val comment: String) {
     val sets = mutableListOf<Set>()
+
+    fun warmup(min: Long, med: Long, max: Long, xMin: Long?) {
+        if (xMin != null) {
+            sets.add(Set(tractionGoal = xMin*1000, duration = 15000, 5000))
+        }
+        sets.addAll(setOf(
+            Set(tractionGoal = min*1000, duration = 10000, restTime = 10000),
+            Set(tractionGoal = med*1000, duration = 5000, restTime = 15000),
+            Set(tractionGoal = max*1000, duration = 1000),
+        ))
+    }
+
+    fun assessmentTest(min: Long, med: Long, max: Long) {
+        sets.addAll(setOf(
+            Set(tractionGoal = min*1000, duration = 15000, restTime = 5000),
+            Set(tractionGoal = med*1000, duration = 10000, restTime = 15000),
+            Set(tractionGoal = max*1000, duration = 5000),
+        ))
+        set(Set(max*1000), repeat = 4)
+    }
+
     fun set(set: Set, repeat: Int = 1) {
         (1..repeat).forEach { _ ->
             sets.add(set.copy())
