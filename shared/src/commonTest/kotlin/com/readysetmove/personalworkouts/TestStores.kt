@@ -21,7 +21,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     : CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
 
     fun useAppStore(
-        deviceStore: IsDeviceStore = MockDeviceStore(),
+        deviceStore: IsDeviceStore = MockDeviceStore(mainDispatcher = this.coroutineContext),
         workoutStore: WorkoutStore,
         init: StoreTester<AppState, AppAction, AppSideEffect>.() -> Unit,
     ) {
