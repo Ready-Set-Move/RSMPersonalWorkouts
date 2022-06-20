@@ -12,6 +12,8 @@ import com.readysetmove.personalworkouts.device.MockDeviceStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutStore
+import io.github.aakira.napier.DebugAntilog
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -23,6 +25,11 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         insertKoin()
+        if (BuildConfig.DEBUG) {
+            Napier.base(DebugAntilog())
+        } else {
+            // TODO: prod logging
+        }
     }
 
     private val appModule = module {

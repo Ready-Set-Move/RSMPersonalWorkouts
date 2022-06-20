@@ -68,6 +68,8 @@ android {
         implementation(libs.koin.core)
         implementation(libs.koin.android)
         implementation(libs.koin.androidx)
+        // Napier logging
+        implementation(libs.napier)
     }
     packagingOptions {
         resources.excludes.add("META-INF/*")
