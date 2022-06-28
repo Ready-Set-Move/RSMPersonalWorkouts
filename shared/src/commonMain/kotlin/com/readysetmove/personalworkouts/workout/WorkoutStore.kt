@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
+// TODO: move to own file
 data class WorkoutProgress(
     val workout: Workout,
     val activeExerciseIndex: Int = 0,
@@ -207,6 +208,7 @@ class WorkoutStore(
                         dispatch(WorkoutAction.FinishExercise)
                     // ...otherwise set active set to next set
                     else {
+                        // TODO: extract to extension method
                         val newWorkoutProgress = workoutProgress.copy(
                             activeSetIndex = workoutProgress.activeSetIndex + 1
                         )

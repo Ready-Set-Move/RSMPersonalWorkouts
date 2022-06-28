@@ -1,9 +1,9 @@
 package com.readysetmove.personalworkouts.workout
 
 class ExerciseBuilder(val name: String, val comment: String) {
-    val sets = mutableListOf<Set>()
+    private val sets = mutableListOf<Set>()
 
-    fun warmup(min: Long, med: Long, max: Long, xMin: Long?) {
+    fun warmup(min: Long, med: Long, max: Long, xMin: Long? = null) {
         if (xMin != null) {
             sets.add(Set(tractionGoal = xMin*1000, duration = 15000, 5000))
         }
