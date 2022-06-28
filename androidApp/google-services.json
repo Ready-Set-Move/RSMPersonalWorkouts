@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "940404047495",
+    "project_id": "may-the-force-be-with-me",
+    "storage_bucket": "may-the-force-be-with-me.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:940404047495:android:f2168f3611825583524222",
+        "android_client_info": {
+          "package_name": "com.readysetmove.personalworkouts.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "940404047495-h6pj852n2ts0levscivean1328btr9um.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.readysetmove.personalworkouts.android",
+            "certificate_hash": "16d30caed1b611f64a93e48847edcf740224b3d9"
+          }
+        },
+        {
+          "client_id": "940404047495-q4rj66rnffl200gp6jhs8rg8i8vqv8do.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABuvixbb4GVMh-gPKjjOMYG3lFBCITBNw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "940404047495-q4rj66rnffl200gp6jhs8rg8i8vqv8do.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

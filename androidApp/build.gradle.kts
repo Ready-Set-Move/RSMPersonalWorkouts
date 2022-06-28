@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("com.google.gms.google-services")
     kotlin("android")
 }
 
@@ -70,6 +71,19 @@ android {
         implementation(libs.koin.androidx)
         // Napier logging
         implementation(libs.napier)
+        // Firebase
+        // - Import the Firebase BoM
+        implementation(platform("com.google.firebase:firebase-bom:30.2.0"))
+        // - When using the BoM, you don't specify versions in Firebase library dependencies
+        // - TODO: enable analytics at release
+        // implementation("com.google.firebase:firebase-analytics-ktx")
+        // - Authentication
+        implementation("com.google.firebase:firebase-auth-ktx")
+        implementation("com.firebaseui:firebase-ui-auth:8.0.1")
+        // -- transient dependencies (do we need the others? https://github.com/firebase/FirebaseUI-Android#auth)
+        implementation("com.google.android.gms:play-services-auth:20.2.0")
+        // - TODO: enable firestore
+        // implementation("com.google.firebase:firebase-firestore-ktx")
     }
     packagingOptions {
         resources.excludes.add("META-INF/*")

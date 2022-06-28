@@ -20,7 +20,7 @@ data class SetResult(val tractionGoal: Long, val tractions: List<Traction>)
 data class WorkoutResults(val workoutId: String, val exercises: Map<String, Map<Int, SetResult>>)
 
 data class AppState(
-    val userId: String? = null,
+    val user: User? = null,
     val workout: Workout? = null,
     val workoutResults: WorkoutResults? = null,
     val isWaitingToHitTractionGoal: Boolean = false,
@@ -28,7 +28,8 @@ data class AppState(
 ) : State
 
 sealed class AppAction: Action {
-    data class SetUser(val userId: String): AppAction()
+    data class SetUser(val user: User): AppAction()
+    object UnsetUser: AppAction()
     object StartWorkout: AppAction()
     object StartNextSet: AppAction()
 }
@@ -67,21 +68,27 @@ class AppStore(
 
     override fun dispatch(action: AppAction) {
         when(action) {
+            is AppAction.UnsetUser -> {
+                Napier.d("Unsetting user", tag = tag)
+                if (state.value.user == null) return
+                // complete reset
+                state.value = AppState()
+            }
             is AppAction.SetUser -> {
-                if (state.value.userId == action.userId) return
+                if (state.value.user == action.user) return
 
-                Napier.d("New user id received: ${action.userId} updating state", tag = tag)
-                state.value = AppState(userId = action.userId)
+                Napier.d("New user received: ${action.user} updating state", tag = tag)
                 launch {
-                    Napier.d("Starting side effect to fetch workout for user: ${action.userId}", tag = tag)
+                    Napier.d("Starting side effect to fetch workout for user id: ${action.user.id}", tag = tag)
                     // TODO: error handling: reset userId and throw error
-                    val workout = workoutRepository.fetchLatestWorkoutForUser(action.userId)
+                    val workout = workoutRepository.fetchLatestWorkoutForUser(action.user.id)
                     // still the same user set?
-                    if (state.value.userId == action.userId) {
-                        Napier.d("Updating state with new workout $workout for user: ${action.userId}", tag = tag)
+                    if (state.value.user == action.user) {
+                        Napier.d("Updating state with new workout $workout for user: ${action.user}", tag = tag)
                         state.value = state.value.copy(workout = workout)
                     }
                 }
+                state.value = AppState(user = action.user)
             }
             is AppAction.StartWorkout -> {
                 val workout = state.value.workout
@@ -94,6 +101,12 @@ class AppStore(
                 workoutStore.dispatch(WorkoutAction.StartWorkout(workout))
             }
             is AppAction.StartNextSet -> {
+                if (state.value.workout == null) {
+                    launch {
+                        sideEffect.emit(AppSideEffect.NoWorkoutSet)
+                    }
+                    return
+                }
                 val currentTractionGoal = workoutState?.workoutProgress?.activeSet()?.tractionGoal
                 if (currentTractionGoal == null) {
                     launch {
@@ -125,12 +138,15 @@ class AppStore(
                 .first { setFinishedEffect ->
                     deviceStore.dispatch(DeviceAction.StopTracking)
                     val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
-                    val workoutResults = updateStateWithResults(
-                        tractions = stoppedState.trackedTraction,
-                        workoutProgress = setFinishedEffect.workoutProgress,
-                        tractionGoal = setFinishedEffect.tractionGoal,
-                    )
-                    storeResults(workoutResults = workoutResults)
+                    // don't update results if workout is no longer running
+                    if (state.value.workout != null) {
+                        val workoutResults = updateStateWithResults(
+                            tractions = stoppedState.trackedTraction,
+                            workoutProgress = setFinishedEffect.workoutProgress,
+                            tractionGoal = setFinishedEffect.tractionGoal,
+                        )
+                        storeResults(workoutResults = workoutResults)
+                    }
                     true
                 }
         }

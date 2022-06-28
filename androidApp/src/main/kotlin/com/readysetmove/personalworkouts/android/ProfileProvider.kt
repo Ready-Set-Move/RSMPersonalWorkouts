@@ -4,6 +4,6 @@ import android.os.Build
 
 object ProfileProvider {
     val isDevMode: Boolean by lazy {
-        return@lazy Build.FINGERPRINT.contains("emulator")
+        return@lazy Build.FINGERPRINT.contains("emulator") || Build.FINGERPRINT.contains("emu64a")
     }
 }

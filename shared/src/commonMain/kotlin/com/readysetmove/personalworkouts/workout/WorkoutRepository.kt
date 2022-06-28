@@ -51,7 +51,7 @@ class WorkoutRepository: IsWorkoutRepository {
                     assessmentTest(min = 25, med = 35, max = 55)
                 }
             }
-            "Rob" -> WorkoutBuilder.workout {
+            "robert.pazurek@gmail.com" -> WorkoutBuilder.workout {
                 exercise("Shrugs") {
                     warmup(xMin = 30, min = 50, med = 75, max = 100)
                     set(Set(100000), repeat = 6)

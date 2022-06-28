@@ -20,6 +20,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.readysetmove.personalworkouts.android.device.management.DeviceManagementOverviewScreen
 import com.readysetmove.personalworkouts.android.permissions.GrantPermissionsScreen
 import com.readysetmove.personalworkouts.android.settings.SettingsScreen
+import com.readysetmove.personalworkouts.android.user.LoginScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
 import com.readysetmove.personalworkouts.app.AppAction
@@ -48,10 +49,6 @@ fun RSMNavHost(navController: NavHostController) {
     val workoutSideEffects = workoutStore.observeSideEffect().collectAsState(null)
     val btStore: BluetoothStore by inject()
     val btState = btStore.observeState().collectAsState()
-
-    LaunchedEffect(true) {
-        appStore.dispatch(AppAction.SetUser(userId = "Rob"))
-    }
 
     val bluetoothAdapter: BluetoothAdapter by remember {
         val bluetoothManager =
@@ -82,12 +79,6 @@ fun RSMNavHost(navController: NavHostController) {
             btStore.dispatch(BluetoothAction.SetBluetoothEnabled(result.resultCode == Activity.RESULT_OK))
         }
 
-    if (!btState.value.bluetoothEnabled) {
-        LaunchedEffect(btState.value.bluetoothEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            requestActivateBTLauncher.launch(enableBtIntent)
-        }
-    }
     val disConnectedSideEffect =
         btStore.observeSideEffect().filterIsInstance<BluetoothSideEffect.DeviceDisConnected>()
             .collectAsState(null)
@@ -97,22 +88,38 @@ fun RSMNavHost(navController: NavHostController) {
         }
     }
 
-    if (!btState.value.bluetoothPermissionsGranted) {
-        GrantPermissionsScreen(btPermissions = btPermissions)
-        return
-    }
-
     LaunchedEffect(workoutSideEffects.value) {
         if (workoutSideEffects.value is WorkoutSideEffect.NewWorkoutStarted) {
             navController.navigate(WorkoutScreen.ROUTE)
         }
     }
 
+    if (!btState.value.bluetoothEnabled) {
+        LaunchedEffect(btState.value.bluetoothEnabled) {
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            requestActivateBTLauncher.launch(enableBtIntent)
+        }
+    }
+    if (!btState.value.bluetoothPermissionsGranted) {
+        GrantPermissionsScreen(btPermissions = btPermissions)
+        return
+    }
+
+    val startDestination = when(true) {
+        (appState.value.user == null) -> LoginScreen.ROUTE
+        else -> LoginScreen.ROUTE
+//        ProfileProvider.isDevMode -> WorkoutOverviewScreen.ROUTE
+//        else -> DeviceManagementOverviewScreen.ROUTE
+    }
+
     NavHost(
         navController = navController,
-        startDestination = if(ProfileProvider.isDevMode) WorkoutOverviewScreen.ROUTE else DeviceManagementOverviewScreen.ROUTE,
+        startDestination = startDestination,
     )
     {
+        composable(route = LoginScreen.ROUTE) {
+            LoginScreen()
+        }
         composable(route = GrantPermissionsScreen.ROUTE) {
             GrantPermissionsScreen(btPermissions = btPermissions)
         }
