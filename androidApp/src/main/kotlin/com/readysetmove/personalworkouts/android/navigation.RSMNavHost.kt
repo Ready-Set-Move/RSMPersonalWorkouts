@@ -107,9 +107,8 @@ fun RSMNavHost(navController: NavHostController) {
 
     val startDestination = when(true) {
         (appState.value.user == null) -> LoginScreen.ROUTE
-        else -> LoginScreen.ROUTE
-//        ProfileProvider.isDevMode -> WorkoutOverviewScreen.ROUTE
-//        else -> DeviceManagementOverviewScreen.ROUTE
+        ProfileProvider.isDevMode -> WorkoutOverviewScreen.ROUTE
+        else -> DeviceManagementOverviewScreen.ROUTE
     }
 
     NavHost(

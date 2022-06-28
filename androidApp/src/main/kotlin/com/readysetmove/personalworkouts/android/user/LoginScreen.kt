@@ -9,9 +9,9 @@ import androidx.compose.ui.platform.LocalContext
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.google.firebase.auth.FirebaseAuth
+import com.readysetmove.personalworkouts.android.toUser
 import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.app.User
 import io.github.aakira.napier.Napier
 import org.koin.androidx.compose.get
 
@@ -30,20 +30,9 @@ fun LoginScreen(appStore: AppStore = get()) {
         when(result.resultCode) {
             RESULT_OK -> {
                 Toast.makeText(context, "Sign in successful", Toast.LENGTH_SHORT).show()
-                FirebaseAuth.getInstance().currentUser?.let {
-                    Napier.d("Sign in successful: ${it.displayName} - ${it.email}")
-                    val displayName = when(true) {
-                        (it.displayName != null) -> it.displayName
-                        (it.email != null) -> it.email
-                        (it.phoneNumber != null) -> it.phoneNumber
-                        else -> null
-                    }
-                    appStore.dispatch(AppAction.SetUser(
-                        User(
-                            displayName = displayName ?: it.uid,
-                            id = it.uid,
-                        )
-                    ))
+                FirebaseAuth.getInstance().currentUser?.toUser()?.let {
+                    Napier.d("Sign in successful: $it")
+                    appStore.dispatch(AppAction.SetUser(it))
                 }
             }
             else -> {

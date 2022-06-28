@@ -64,6 +64,22 @@ class AppStore(
                 workoutState = it
             }
         }
+        state.value.user?.let {
+            fetchWorkoutForUser(it)
+        }
+    }
+
+    private fun fetchWorkoutForUser(user: User) {
+        launch {
+            Napier.d("Starting side effect to fetch workout for user id: ${user.id}", tag = tag)
+            // TODO: error handling: reset userId and throw error
+            val workout = workoutRepository.fetchLatestWorkoutForUser(user.id)
+            // still the same user set?
+            if (state.value.user == user) {
+                Napier.d("Updating state with new workout $workout for user: $user", tag = tag)
+                state.value = state.value.copy(workout = workout)
+            }
+        }
     }
 
     override fun dispatch(action: AppAction) {
@@ -76,18 +92,8 @@ class AppStore(
             }
             is AppAction.SetUser -> {
                 if (state.value.user == action.user) return
-
-                Napier.d("New user received: ${action.user} updating state", tag = tag)
-                launch {
-                    Napier.d("Starting side effect to fetch workout for user id: ${action.user.id}", tag = tag)
-                    // TODO: error handling: reset userId and throw error
-                    val workout = workoutRepository.fetchLatestWorkoutForUser(action.user.id)
-                    // still the same user set?
-                    if (state.value.user == action.user) {
-                        Napier.d("Updating state with new workout $workout for user: ${action.user}", tag = tag)
-                        state.value = state.value.copy(workout = workout)
-                    }
-                }
+                Napier.d("New user received: $action.user updating state", tag = tag)
+                fetchWorkoutForUser(action.user)
                 state.value = AppState(user = action.user)
             }
             is AppAction.StartWorkout -> {

@@ -1,8 +1,12 @@
 package com.readysetmove.personalworkouts.android
 
 import android.app.Application
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.readysetmove.personalworkouts.IsTimestampProvider
+import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
+import com.readysetmove.personalworkouts.app.User
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
@@ -45,7 +49,7 @@ class App : Application() {
             )
         }
         single<IsTimestampProvider> {
-            object: IsTimestampProvider {
+            object : IsTimestampProvider {
                 override fun getTimeMillis(): Long {
                     return System.currentTimeMillis()
                 }
@@ -54,7 +58,7 @@ class App : Application() {
         single<IsWorkoutRepository> {
             WorkoutRepository()
         }
-        if (ProfileProvider.isDevMode){
+        if (ProfileProvider.isDevMode) {
             single<IsDeviceStore> {
                 MockDeviceStore(mainDispatcher = Dispatchers.Main)
             }
@@ -78,7 +82,10 @@ class App : Application() {
                 workoutRepository = get(),
                 workoutStore = get(),
                 deviceStore = get(),
-                mainDispatcher = Dispatchers.Main
+                mainDispatcher = Dispatchers.Main,
+                initialState = AppState(
+                    user = FirebaseAuth.getInstance().currentUser?.toUser()
+                )
             )
         }
     }
@@ -91,5 +98,19 @@ class App : Application() {
             modules(appModule)
         }
     }
+
     companion object
+}
+
+fun FirebaseUser.toUser(): User {
+    val userName = when (true) {
+        (displayName != null && displayName != "") -> displayName
+        (email != null && email != "") -> email
+        (phoneNumber != null && phoneNumber != "") -> phoneNumber
+        else -> uid
+    }
+    return User(
+        displayName = userName ?: this.uid,
+        id = this.uid,
+    )
 }
