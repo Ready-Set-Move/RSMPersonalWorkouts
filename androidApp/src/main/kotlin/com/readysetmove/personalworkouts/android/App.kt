@@ -103,10 +103,11 @@ class App : Application() {
 }
 
 fun FirebaseUser.toUser(): User {
+
     val userName = when (true) {
-        (displayName != null && displayName != "") -> displayName
-        (email != null && email != "") -> email
-        (phoneNumber != null && phoneNumber != "") -> phoneNumber
+        (displayName?.isBlank() ?: false) -> displayName
+        (email?.isBlank() ?: false) -> email
+        (phoneNumber?.isBlank() ?: false) -> phoneNumber
         else -> uid
     }
     return User(

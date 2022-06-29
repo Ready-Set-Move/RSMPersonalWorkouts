@@ -17,8 +17,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.device.Traction
-import com.readysetmove.personalworkouts.workout.EntityMocks
 import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.ExerciseBuilder
 import com.readysetmove.personalworkouts.workout.Set
 
 object WorkoutScreen {
@@ -59,6 +59,7 @@ fun WorkoutScreen(
             .padding(AppTheme.spacings.md)) {
             Text(text = exercise.name, style = AppTheme.typography.h3)
             Text(text = "Goal: ${set.tractionGoal/1000} kg")
+            Text(text = "Position: %.1f".format(exercise.position))
             Text(text = "%.1f".format(currentLoad-set.tractionGoal/1000), style = AppTheme.typography.h1)
             Text(text = "${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)}s", style = AppTheme.typography.h1)
             Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
@@ -84,8 +85,8 @@ fun WorkoutScreen(
 fun PreviewWorkoutScreen() {
     AppTheme {
         WorkoutScreen(
-            exercise = EntityMocks.ROWS,
-            set = EntityMocks.SET,
+            exercise = ExerciseBuilder(name = "Rows", comment = "Rows Cmt", position = 6.5f).build(),
+            set = Set(tractionGoal = 50000, duration = 6000, restTime = 5000),
             timeToWork = 6000,
             timeToRest = 0,
             onStartSet = {},

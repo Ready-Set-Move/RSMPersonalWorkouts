@@ -1,6 +1,6 @@
 package com.readysetmove.personalworkouts.workout
 
-class ExerciseBuilder(val name: String, val comment: String) {
+class ExerciseBuilder(val name: String, val comment: String, val position: Float) {
     private val sets = mutableListOf<Set>()
 
     fun warmup(min: Long, med: Long, max: Long, xMin: Long? = null) {
@@ -34,12 +34,13 @@ class ExerciseBuilder(val name: String, val comment: String) {
             name = name,
             comment = comment,
             sets = sets,
+            position = position,
         )
     }
 }
 
 class WorkoutBuilder(private val id: String, val comment: String) {
-    val exercises = mutableListOf<ExerciseBuilder>()
+    private val exercises = mutableListOf<ExerciseBuilder>()
 
     companion object {
         fun workout(
@@ -59,11 +60,13 @@ class WorkoutBuilder(private val id: String, val comment: String) {
     fun exercise(
         name: String = "TESTCERCISE",
         comment: String = "$name TEST_COMMENT",
+        position: Float,
         init: ExerciseBuilder.() -> Unit
     ): ExerciseBuilder {
         val builder = ExerciseBuilder(
             name = name,
             comment = comment,
+            position = position
         )
         exercises.add(builder)
         builder.init()
