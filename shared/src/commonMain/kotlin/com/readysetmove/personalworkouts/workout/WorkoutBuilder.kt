@@ -60,7 +60,7 @@ class WorkoutBuilder(private val id: String, val comment: String) {
     fun exercise(
         name: String = "TESTCERCISE",
         comment: String = "$name TEST_COMMENT",
-        position: Float,
+        position: Float = 0f,
         init: ExerciseBuilder.() -> Unit
     ): ExerciseBuilder {
         val builder = ExerciseBuilder(
