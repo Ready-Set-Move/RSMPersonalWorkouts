@@ -97,42 +97,42 @@ class AppStore(
                 state.value = AppState(user = action.user)
             }
             is AppAction.StartWorkout -> {
-                val workout = state.value.workout
-                if (workout == null) {
+                state.value.workout?.let { workout ->
+                    workoutStore.dispatch(WorkoutAction.StartWorkout(workout))
+                } ?: run {
                     launch {
                         sideEffect.emit(AppSideEffect.NoWorkoutSet)
                     }
-                    return
                 }
-                workoutStore.dispatch(WorkoutAction.StartWorkout(workout))
             }
             is AppAction.StartNextSet -> {
-                if (state.value.workout == null) {
-                    launch {
+                when(state.value.workout) {
+                    null -> launch {
                         sideEffect.emit(AppSideEffect.NoWorkoutSet)
                     }
-                    return
-                }
-                val currentTractionGoal = workoutState?.workoutProgress?.activeSet()?.tractionGoal
-                if (currentTractionGoal == null) {
-                    launch {
-                        sideEffect.emit(AppSideEffect.NoSetInProgress)
+                    else -> {
+                        workoutState?.workoutProgress?.activeSet()?.tractionGoal?.let { currentTractionGoal ->
+                            launch {
+                                // handle max sets with 0 weight starting at 5
+                                val tractionGoalThreshold = if(currentTractionGoal>0f) currentTractionGoal*.8f else 5f
+                                // start tracking as soon as we have relevant traction delivered
+                                deviceStore.observeState().first { deviceState ->
+                                    // start countdown and tracking as soon as we hit relevant weight
+                                    // TODO: what if we don't hit the minimal goal?
+                                    deviceState.traction*1000 >= tractionGoalThreshold
+                                }
+                                workoutStore.dispatch(WorkoutAction.StartSet)
+                            }
+                            // TODO: pull up tracking! Separate into WorkoutResultsStore?
+                            startTracking()
+                            state.value = state.value.copy(isWaitingToHitTractionGoal = true)
+                        } ?: run {
+                            launch {
+                                sideEffect.emit(AppSideEffect.NoSetInProgress)
+                            }
+                        }
                     }
-                    return
                 }
-                launch {
-                    // handle max sets with 0 weight starting at 5
-                    val tractionGoalThreshold = if(currentTractionGoal>0f) currentTractionGoal*.8f else 5f
-                    // start tracking as soon as we have relevant traction delivered
-                    deviceStore.observeState().first { deviceState ->
-                        // start countdown and tracking as soon as we hit relevant weight
-                        // TODO: what if we don't hit the minimal goal?
-                        deviceState.traction*1000 >= tractionGoalThreshold
-                    }
-                    workoutStore.dispatch(WorkoutAction.StartSet)
-                }
-                startTracking()
-                state.value = state.value.copy(isWaitingToHitTractionGoal = true)
             }
         }
     }
@@ -144,8 +144,8 @@ class AppStore(
                 .first { setFinishedEffect ->
                     deviceStore.dispatch(DeviceAction.StopTracking)
                     val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
-                    // don't update results if workout is no longer running
-                    if (state.value.workout != null) {
+                    // only update results if workout is still running
+                    state.value.workout?.let {
                         val workoutResults = updateStateWithResults(
                             tractions = stoppedState.trackedTraction,
                             workoutProgress = setFinishedEffect.workoutProgress,
@@ -160,8 +160,8 @@ class AppStore(
     }
 
     private fun updateStateWithResults(tractions: List<Traction>, tractionGoal: Long, workoutProgress: WorkoutProgress): WorkoutResults {
+        // TODO: segment tracked data in ramp up < work > ramp down phases
         val exercise = workoutProgress.activeExercise()
-        val currentWorkoutResults = state.value.workoutResults
         // tractions need timestamps relative to beginning of first traction
         val setStart = tractions.first().timestamp
         val timedTractions = tractions.map {
@@ -171,23 +171,16 @@ class AppStore(
             tractionGoal = tractionGoal,
             tractions = timedTractions
         )
-        val exerciseResults = mapOf(workoutProgress.activeSetIndex to setResult)
-        // no results yet? create everything from scratch
-        if (currentWorkoutResults == null) {
-            val exercises = mapOf(exercise.name to exerciseResults)
-            val workoutResults = WorkoutResults(workoutProgress.workout.id, exercises = exercises)
-            state.value = state.value.copy(
-                workoutResults = workoutResults,
-                isWaitingToHitTractionGoal = false,
-                latestSetResult = setResult,
+        val workoutResults = state.value.workoutResults?.copyWithAddedResults(
+                setWithResult = workoutProgress.activeSetIndex to setResult,
+                workoutProgress = workoutProgress
             )
-            return workoutResults
-        }
-
-        val workoutResults = currentWorkoutResults.copyWithAddedResults(
-            exerciseResults = exerciseResults,
-            workoutProgress = workoutProgress
+        // no results yet? create everything from scratch for the first result
+        ?: WorkoutResults(
+            workoutId = workoutProgress.workout.id,
+            exercises = mapOf(exercise.name to mapOf(workoutProgress.activeSetIndex to setResult))
         )
+
         state.value = state.value.copy(
             workoutResults = workoutResults,
             isWaitingToHitTractionGoal = false,
@@ -202,28 +195,13 @@ class AppStore(
     }
 }
 
-fun WorkoutResults.copyWithAddedResults(exerciseResults: Map<Int, SetResult>, workoutProgress: WorkoutProgress): WorkoutResults {
+fun WorkoutResults.copyWithAddedResults(setWithResult: Pair<Int, SetResult>, workoutProgress: WorkoutProgress): WorkoutResults {
     // TODO: unit tests
     val exercise = workoutProgress.activeExercise()
 
-    val currentExerciseResults = exercises[exercise.name]
-    // no results for this exercise yet? create exercise with first set and copy other exercises
-    if (currentExerciseResults == null) {
-        val newExercises = mutableMapOf(exercise.name to exerciseResults)
-        exercises.toMap(newExercises)
+    val newExerciseResults =
+        exercises[exercise.name]?.toMutableMap()?.plus(setWithResult)
+        ?: mapOf(setWithResult) // no results for this exercise yet? create new results map
 
-        return this.copy(exercises = newExercises)
-    }
-
-    // copy exercises
-    val newExercises = mutableMapOf<String, Map<Int, SetResult>>()
-    exercises.toMap(newExercises)
-
-    // copy sets
-    val newExerciseResults = exerciseResults.toMutableMap()
-    currentExerciseResults.toMap(newExerciseResults)
-
-    // override current exercise
-    newExercises[exercise.name] = newExerciseResults
-    return this.copy(exercises = newExercises)
+    return this.copy(exercises = exercises.plus(exercise.name to newExerciseResults))
 }
