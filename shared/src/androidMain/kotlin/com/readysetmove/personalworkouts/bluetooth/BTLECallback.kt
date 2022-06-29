@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import io.github.aakira.napier.Napier
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -29,7 +30,7 @@ class BTLECallback(
     ) {
         with(device) {
             val logTag = "$classLogTag.onConnectionStateChange"
-            Log.d(logTag, "state changed: status=$status newState=$newState")
+            Napier.d(tag = logTag, message = "state changed: status=$status newState=$newState")
             if (gatt == null) return
             if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                     Manifest.permission.BLUETOOTH_CONNECT)
@@ -43,11 +44,11 @@ class BTLECallback(
             }
             if (newState == BluetoothGatt.STATE_CONNECTED) {
                 reconnectAttemptsLeft = maxReconnectAttempts
-                Log.d(logTag, "device connected: $deviceName@$address")
+                Napier.d(tag = logTag, message = "device connected: $deviceName@$address")
                 gatt.discoverServices()
             }
             if (newState == BluetoothGatt.STATE_DISCONNECTED) {
-                Log.d(logTag, "device disconnected: $deviceName@$address")
+                Napier.d(tag = logTag, message = "device disconnected: $deviceName@$address")
                 onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("Device disconnected."))
             }
         }
@@ -59,8 +60,7 @@ class BTLECallback(
         if (status != BluetoothGatt.GATT_SUCCESS) {
             reconnect(status = status, gatt = gatt, logTag)
         } else {
-            Log.d(logTag, "services discovered")
-            gatt.printGattTable()
+            Napier.d("services discovered", tag = logTag)
             enableTractionNotifications(gatt, classLogTag)
         }
     }
@@ -70,7 +70,7 @@ class BTLECallback(
         characteristic: BluetoothGattCharacteristic?,
     ) {
         val logTag = "$classLogTag.onCharacteristicChanged"
-        Log.d(logTag, "started")
+        Napier.d(tag = logTag, message = "started")
         if (characteristic == null) return
         val weight =
             ByteBuffer.wrap(characteristic.value).order(ByteOrder.LITTLE_ENDIAN)
@@ -84,12 +84,12 @@ class BTLECallback(
         status: Int,
     ) {
         val logTag = "$classLogTag.onDescriptorWrite"
-        Log.d(logTag, "received ${descriptor?.uuid}")
+        Napier.d(tag = logTag, message = "received ${descriptor?.uuid}")
         if (gatt == null || descriptor?.uuid != cccdUuid) return
         if (status != BluetoothGatt.GATT_SUCCESS) {
             return reconnect(status = status, gatt = gatt, logTag)
         }
-        Log.d(logTag, "CCC descriptor successfully enabled")
+        Napier.d(tag = logTag, message = "CCC descriptor successfully enabled")
         onDeviceConnected()
     }
 
@@ -118,7 +118,7 @@ class BTLECallback(
             cccDescriptor.value =
                 BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             gatt.writeDescriptor(cccDescriptor)
-            Log.d(logTag, "traction characteristic enabled")
+            Napier.d(tag = logTag, message = "traction characteristic enabled")
         }
             ?: onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("Traction characteristic does not contain CCC descriptor. $tractionCharacteristic"))
     }
