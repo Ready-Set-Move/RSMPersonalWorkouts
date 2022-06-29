@@ -14,13 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
-// TODO: move to own file
-data class WorkoutProgress(
-    val workout: Workout,
-    val activeExerciseIndex: Int = 0,
-    val activeSetIndex: Int = 0,
-)
-
 data class WorkoutState(
     val workoutProgress: WorkoutProgress? = null,
     val timeToWork: Long = 0,
@@ -30,14 +23,6 @@ data class WorkoutState(
     val working: Boolean = false,
     val startTime: Long = 0,
 ) : State
-
-fun WorkoutProgress.activeExercise(): Exercise {
-    return workout.exercises[activeExerciseIndex]
-}
-
-fun WorkoutProgress.activeSet(): Set {
-    return activeExercise().sets[activeSetIndex]
-}
 
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workout: Workout): WorkoutAction()
