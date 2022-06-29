@@ -8,12 +8,12 @@ import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.*
+import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
 import com.readysetmove.personalworkouts.workout.results.SetResult
 import com.readysetmove.personalworkouts.workout.results.WorkoutResults
 import com.readysetmove.personalworkouts.workout.results.copyWithAddedResults
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
@@ -41,6 +41,7 @@ sealed class AppSideEffect : Effect {
 class AppStore(
     initialState: AppState = AppState(),
     private val workoutRepository: IsWorkoutRepository,
+    private val workoutResultsRepository: IsWorkoutResultsRepository,
     private val deviceStore: IsDeviceStore,
     private val workoutStore: WorkoutStore,
     private val mainDispatcher: CoroutineContext,
@@ -145,7 +146,7 @@ class AppStore(
                     val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
                     // only update results if workout is still running
                     state.value.workout?.let {
-                        storeResults(
+                        workoutResultsRepository.storeResults(
                             workoutResults = updateStateWithResults(
                                 tractions = stoppedState.trackedTraction,
                                 workoutProgress = setFinishedEffect.workoutProgress,
@@ -181,10 +182,5 @@ class AppStore(
             latestSetResult = setResult,
         )
         return workoutResults
-    }
-
-    private suspend fun storeResults(workoutResults: WorkoutResults) {
-        // TODO: store results if possible move to repository
-        delay(10)
     }
 }

@@ -9,6 +9,7 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.*
 import com.readysetmove.personalworkouts.workout.*
+import com.readysetmove.personalworkouts.workout.results.WorkoutResultsRepository
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             deviceStore = deviceStore,
             mainDispatcher = this.coroutineContext,
             workoutRepository = WorkoutRepository(),
+            workoutResultsRepository = WorkoutResultsRepository(),
         )
         val storeTester = StoreTester(
             store = appStore,

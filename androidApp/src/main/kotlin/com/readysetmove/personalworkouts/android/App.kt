@@ -14,6 +14,8 @@ import com.readysetmove.personalworkouts.device.MockDeviceStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutStore
+import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
+import com.readysetmove.personalworkouts.workout.results.WorkoutResultsRepository
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +58,9 @@ class App : Application() {
         single<IsWorkoutRepository> {
             WorkoutRepository()
         }
+        single<IsWorkoutResultsRepository> {
+            WorkoutResultsRepository()
+        }
         if (ProfileProvider.isDevMode) {
             single<IsDeviceStore> {
                 MockDeviceStore(mainDispatcher = Dispatchers.Main)
@@ -78,6 +83,7 @@ class App : Application() {
         single {
             AppStore(
                 workoutRepository = get(),
+                workoutResultsRepository = get(),
                 workoutStore = get(),
                 deviceStore = get(),
                 mainDispatcher = Dispatchers.Main,
