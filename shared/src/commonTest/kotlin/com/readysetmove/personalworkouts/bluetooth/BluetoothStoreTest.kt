@@ -10,7 +10,7 @@ import kotlin.test.Test
 class BluetoothStoreTest {
 
     @Test
-    fun theStoreGoesToConnectedStateReceivesWeightUpdatesAndDisconnectsOnException() = runTest {
+    fun `the store goes to connected state receives weight updates and disconnects on exception`() = runTest {
         TestStores(testScheduler).useBluetoothStore {
             prepare {
                 val flowMock = flow {
@@ -39,7 +39,7 @@ class BluetoothStoreTest {
     }
 
     @Test
-    fun theStoreAbortsScanningOnStopScanning() = runTest {
+    fun `the store aborts scanning on stop scanning`() = runTest {
         TestStores(testScheduler).useBluetoothStore {
             prepare {
                 val flowMock = flow<BluetoothService.BluetoothDeviceActions> {
@@ -59,7 +59,7 @@ class BluetoothStoreTest {
     }
 
     @Test
-    fun theStoreCallsSetTaraAndDisconnectsOnBluetoothDisabled() = runTest {
+    fun `the store calls set tara and disconnects on bluetooth disabled`() = runTest {
         TestStores(testScheduler).useBluetoothStore {
             expect { initialState }
             dispatch { BluetoothAction.ScanAndConnect }

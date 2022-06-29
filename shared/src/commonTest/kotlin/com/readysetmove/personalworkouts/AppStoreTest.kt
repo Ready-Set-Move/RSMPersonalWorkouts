@@ -10,7 +10,7 @@ import kotlin.test.Test
 class AppStoreTest {
 
     @Test
-    fun theStoreCanBeSetupAndTriggerWorkoutStart() = runTest {
+    fun `the store can be setup and trigger workout start`() = runTest {
         val stores = TestStores(testScheduler)
         val tractionGoal = 1337000L
         val setDuration = 100L

@@ -8,7 +8,7 @@ import kotlin.test.Test
 class WorkoutStoreTest {
 
     @Test
-    fun theStoreYieldsTheProgressForTheSetWorkout() = runTest {
+    fun `the store yields the progress for the set workout`() = runTest {
         val stores = TestStores(testScheduler)
         val tractionGoal = 1337000L
         val setDuration = 100L
@@ -48,7 +48,7 @@ class WorkoutStoreTest {
    }
 
     @Test
-    fun theStoreProgressesThroughAComplexWorkout() = runTest {
+    fun `the store progresses through a complex workout`() = runTest {
         val stores = TestStores(testScheduler)
         val timestampProvider = MockTimestampProvider()
         val workout = WorkoutBuilder.workout {
