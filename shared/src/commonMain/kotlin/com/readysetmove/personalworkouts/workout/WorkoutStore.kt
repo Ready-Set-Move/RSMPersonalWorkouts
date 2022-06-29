@@ -3,8 +3,9 @@ package com.readysetmove.personalworkouts.workout
 import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
-import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
+import com.readysetmove.personalworkouts.workout.WorkoutStateFactory.workoutStateOfNewWorkout
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -13,16 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
-
-data class WorkoutState(
-    val workoutProgress: WorkoutProgress? = null,
-    val timeToWork: Long = 0,
-    val timeToRest: Long = 0,
-    val tractionGoal: Long? = null,
-    val durationGoal: Long? = null,
-    val working: Boolean = false,
-    val startTime: Long = 0,
-) : State
 
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workout: Workout): WorkoutAction()
@@ -75,102 +66,64 @@ class WorkoutStore(
     }
 
     override fun dispatch(action: WorkoutAction) {
-        val check4Workout = {
-            if (state.value.workoutProgress == null) {
-                launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.WorkoutNotSetException))
-            }
-            state.value.workoutProgress
-        }
-        when(action) {
-            is WorkoutAction.StartWorkout -> {
-                if (action.workout.isNotValid { exception ->
-                    launchError(WorkoutSideEffect.Error(exception))
-                }) return
+        try {
+            when(action) {
+                is WorkoutAction.StartWorkout -> {
+                    if (action.workout.isNotValid { exception ->
+                        launchError(WorkoutSideEffect.Error(exception))
+                    }) return
 
-                val firstSet = action.workout.exercises.first().sets.first()
-                state.value = WorkoutState(
-                    workoutProgress = WorkoutProgress(
+                    state.value = workoutStateOfNewWorkout(
                         workout = action.workout,
-                    ),
-                    timeToWork = firstSet.duration,
-                    timeToRest = 0,
-                    tractionGoal = firstSet.tractionGoal,
-                    durationGoal = firstSet.duration,
-                )
-                launch {
-                    sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
+                        firstSet = action.workout.exercises.first().sets.first(),
+                    )
+                    launch {
+                        sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
+                    }
                 }
-            }
-            is WorkoutAction.FinishExercise -> {
-                check4Workout()?.let { workoutProgress ->
-                    // already last exercise?
-                    if (workoutProgress.activeExercise() === workoutProgress.workout.exercises.last()) {
-                        launch {
+                is WorkoutAction.FinishExercise -> {
+                    when {
+                        state.value.workoutProgress.atLastExercise() -> launch {
+                            Napier.d("Last exercise finished. Emitting WorkoutFinished effect.")
                             sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
                         }
-                        return
+                        else -> state.value = state.value.forNextExercise()
                     }
-
-                    // starting next exercise
-                    val nextExerciseIndex = workoutProgress.activeExerciseIndex + 1
-                    val nextSet = workoutProgress.workout.exercises[nextExerciseIndex].sets.first()
-                    state.value = state.value.copy(
-                        workoutProgress = workoutProgress.copy(
-                            activeExerciseIndex = nextExerciseIndex,
-                            activeSetIndex = 0,
-                        ),
-                        timeToRest = 0,
-                        timeToWork = nextSet.duration,
-                        tractionGoal = nextSet.tractionGoal,
-                        durationGoal = nextSet.duration,
-                    )
                 }
-            }
-            is WorkoutAction.StartSet -> {
-                check4Workout()?.let { workoutProgress ->
+                is WorkoutAction.StartSet -> {
                     val currentTractionGoal = state.value.tractionGoal
                     val currentDurationGoal = state.value.durationGoal
-                    if (currentTractionGoal == null) {
-                        launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.NoTractionGoalAtStartOfSetException))
-                        return
-                    }
-                    if (currentDurationGoal == null) {
-                        launchError(WorkoutSideEffect.Error(WorkoutStoreExceptions.NoDurationGoalAtStartOfSetException))
-                        return
-                    }
-                    state.value = state.value.copy(
-                        working = true,
-                        startTime = timestampProvider.getTimeMillis()
-                    )
-                    // Start the set and count down time
-                    val workTimeCountdown = launch {
-                        while (state.value.timeToWork > 0) {
-                            delay(TICKS)
-                            val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                            val timeToWork = currentDurationGoal - timeDone
-                            state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
+                    when {
+                        currentTractionGoal == null -> throw WorkoutStoreExceptions.NoTractionGoalAtStartOfSetException
+                        currentDurationGoal == null -> throw WorkoutStoreExceptions.NoDurationGoalAtStartOfSetException
+                        else -> {
+                            val (newState, workoutProgress) = state.value.forSetStart(startTime = timestampProvider.getTimeMillis())
+                            state.value = newState
+                            // Start the set and count down time
+                            val workTimeCountdown = launch {
+                                while (state.value.timeToWork > 0) {
+                                    delay(TICKS)
+                                    val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
+                                    val timeToWork = currentDurationGoal - timeDone
+                                    state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
+                                }
+                            }
+                            workTimeCountdown.invokeOnCompletion {
+                                launch {
+                                    sideEffect.emit(WorkoutSideEffect.SetFinished(
+                                        workoutProgress = workoutProgress,
+                                        tractionGoal = currentTractionGoal,
+                                    ))
+                                }
+                                state.value = state.value.copy(working = false)
+                                dispatch(WorkoutAction.StartRest)
+                            }
                         }
-                    }
-                    workTimeCountdown.invokeOnCompletion {
-                        launch {
-                            sideEffect.emit(WorkoutSideEffect.SetFinished(
-                                workoutProgress = workoutProgress,
-                                tractionGoal = currentTractionGoal,
-                                // TODO: emit duration goal (set?)
-                            ))
-                        }
-                        state.value = state.value.copy(working = false)
-                        dispatch(WorkoutAction.StartRest)
                     }
                 }
-            }
-            is WorkoutAction.StartRest -> {
-                check4Workout()?.let { workoutProgress ->
-                    state.value = state.value.copy(
-                        timeToRest = workoutProgress.activeSet().restTime,
-                        timeToWork = 0,
-                        startTime = timestampProvider.getTimeMillis(),
-                    )
+                is WorkoutAction.StartRest -> {
+                    val (newState, workoutProgress) = state.value.forRest(timestampProvider.getTimeMillis())
+                    state.value = newState
                     val restTimeCounter = launch {
                         while (state.value.timeToRest > 0) {
                             delay(TICKS)
@@ -183,39 +136,24 @@ class WorkoutStore(
                         dispatch(WorkoutAction.FinishSet)
                     }
                 }
-            }
-            is WorkoutAction.FinishSet -> {
-                check4Workout()?.let { workoutProgress ->
-                    // was this the last set of the exercise? If so finish the exercise...
-                    if (workoutProgress.activeSet() === workoutProgress.activeExercise().sets.last())
-                        dispatch(WorkoutAction.FinishExercise)
-                    // ...otherwise set active set to next set
-                    else {
-                        // TODO: extract to extension method
-                        val newWorkoutProgress = workoutProgress.copy(
-                            activeSetIndex = workoutProgress.activeSetIndex + 1
-                        )
-                        val nextSet = newWorkoutProgress.activeSet()
-                        state.value = state.value.copy(
-                            workoutProgress = newWorkoutProgress,
-                            timeToRest = 0,
-                            timeToWork = nextSet.duration,
-                            tractionGoal = nextSet.tractionGoal,
-                            durationGoal = nextSet.duration
-                        )
-                    }
+                is WorkoutAction.FinishSet -> {
+                    state.value.forNextSet()?.let {
+                        state.value = it
+                    } ?: dispatch(WorkoutAction.FinishExercise)
+                }
+                is WorkoutAction.SetDurationGoal -> {
+                    if (state.value.working) return
+
+                    state.value = state.value.copy(durationGoal = action.durationGoal)
+                }
+                is WorkoutAction.SetTractionGoal -> {
+                    if (state.value.working) return
+
+                    state.value = state.value.copy(tractionGoal = action.tractionGoal)
                 }
             }
-            is WorkoutAction.SetDurationGoal -> {
-                if (state.value.working) return
-
-                state.value = state.value.copy(durationGoal = action.durationGoal)
-            }
-            is WorkoutAction.SetTractionGoal -> {
-                if (state.value.working) return
-
-                state.value = state.value.copy(tractionGoal = action.tractionGoal)
-            }
+        } catch (exception: Exception) {
+            launchError(WorkoutSideEffect.Error(exception))
         }
     }
 

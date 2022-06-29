@@ -10,6 +10,11 @@ fun WorkoutProgress.activeExercise(): Exercise {
     return workout.exercises[activeExerciseIndex]
 }
 
+fun WorkoutProgress?.atLastExercise(): Boolean {
+    if (this == null) return false
+    return activeExercise() === workout.exercises.last()
+}
+
 fun WorkoutProgress.activeSet(): Set {
     return activeExercise().sets[activeSetIndex]
 }
