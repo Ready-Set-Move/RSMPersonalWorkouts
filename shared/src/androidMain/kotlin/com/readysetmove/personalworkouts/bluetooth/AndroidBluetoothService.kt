@@ -23,22 +23,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 
-fun BluetoothGatt.printGattTable() {
-    if (services.isEmpty()) {
-        Log.i("printGattTable",
-            "No service and characteristic available, call discoverServices() first?")
-        return
-    }
-    services.forEach { service ->
-        val characteristicsTable = service.characteristics.joinToString(
-            separator = "\n|--",
-            prefix = "|--"
-        ) { it.uuid.toString() }
-        Log.i("printGattTable", "\nService ${service.uuid}\nCharacteristics:\n$characteristicsTable"
-        )
-    }
-}
-
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {

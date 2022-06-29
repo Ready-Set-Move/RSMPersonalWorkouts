@@ -59,6 +59,7 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
             // if this is a step running after previous steps
             expects.add(0, initialState)
         }
+        // TODO: enhance test failure output to to find errors faster (iterate over states?)
         assertEquals(
             expects,
             values,
