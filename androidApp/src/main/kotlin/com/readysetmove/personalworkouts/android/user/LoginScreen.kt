@@ -30,7 +30,7 @@ fun LoginScreen(appStore: AppStore = get()) {
         when(result.resultCode) {
             RESULT_OK -> {
                 Toast.makeText(context, "Sign in successful", Toast.LENGTH_SHORT).show()
-                FirebaseAuth.getInstance().currentUser?.toUser()?.let {
+                FirebaseAuth.getInstance().currentUser.toUser()?.let {
                     Napier.d("Sign in successful: $it")
                     appStore.dispatch(AppAction.SetUser(it))
                 }

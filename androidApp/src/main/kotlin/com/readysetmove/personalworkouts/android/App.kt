@@ -2,11 +2,9 @@ package com.readysetmove.personalworkouts.android
 
 import android.app.Application
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.app.User
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
@@ -84,7 +82,7 @@ class App : Application() {
                 deviceStore = get(),
                 mainDispatcher = Dispatchers.Main,
                 initialState = AppState(
-                    user = FirebaseAuth.getInstance().currentUser?.toUser()
+                    user = FirebaseAuth.getInstance().currentUser.toUser()
                 )
             )
         }
@@ -100,18 +98,4 @@ class App : Application() {
     }
 
     companion object
-}
-
-fun FirebaseUser.toUser(): User {
-
-    val userName = when {
-        (displayName?.isBlank() ?: false) -> displayName
-        (email?.isBlank() ?: false) -> email
-        (phoneNumber?.isBlank() ?: false) -> phoneNumber
-        else -> uid
-    }
-    return User(
-        displayName = userName ?: this.uid,
-        id = this.uid,
-    )
 }
