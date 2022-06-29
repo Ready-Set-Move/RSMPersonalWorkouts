@@ -23,6 +23,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 
+// TODO: fetch app setup from database
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
