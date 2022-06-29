@@ -89,10 +89,6 @@ class WorkoutStore(
         }
     }
 
-    companion object {
-        const val TICKS = 10L
-    }
-
     override fun dispatch(action: WorkoutAction) {
         val check4Workout = {
             if (state.value.workoutProgress == null) {
@@ -102,7 +98,9 @@ class WorkoutStore(
         }
         when(action) {
             is WorkoutAction.StartWorkout -> {
-                if (!action.workout.isValid(launchError = this::launchError)) return
+                if (action.workout.isNotValid { exception ->
+                    launchError(WorkoutSideEffect.Error(exception))
+                }) return
 
                 val firstSet = action.workout.exercises.first().sets.first()
                 state.value = WorkoutState(
@@ -235,26 +233,8 @@ class WorkoutStore(
             }
         }
     }
-}
 
-fun Workout.isValid(launchError: (WorkoutSideEffect.Error) -> Unit): Boolean {
-    if (exercises.isEmpty()) {
-        launchError(WorkoutSideEffect.Error(
-            WorkoutExceptions.EmptyWorkoutException(this)
-        ))
-        return false
+    companion object {
+        const val TICKS = 10L
     }
-    exercises.forEach { exercise ->
-        if (exercise.sets.isEmpty()) {
-            launchError(WorkoutSideEffect.Error(
-                WorkoutExceptions.EmptyExerciseException(
-                    workout = this,
-                    exercise = exercise,
-                )
-            ))
-            return false
-        }
-    }
-    return true
 }
-
