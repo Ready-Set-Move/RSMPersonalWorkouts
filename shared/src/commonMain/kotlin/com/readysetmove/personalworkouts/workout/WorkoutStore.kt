@@ -59,19 +59,11 @@ class WorkoutStore(
     override fun observeState(): StateFlow<WorkoutState> = state
     override fun observeSideEffect(): Flow<WorkoutSideEffect> = sideEffect
 
-    private fun launchError(error: WorkoutSideEffect.Error) {
-        launch {
-            sideEffect.emit(error)
-        }
-    }
-
     override fun dispatch(action: WorkoutAction) {
         try {
             when(action) {
                 is WorkoutAction.StartWorkout -> {
-                    if (action.workout.isNotValid { exception ->
-                        launchError(WorkoutSideEffect.Error(exception))
-                    }) return
+                    action.workout.throwIfNotValid()
 
                     state.value = workoutStateOfNewWorkout(
                         workout = action.workout,
@@ -97,44 +89,16 @@ class WorkoutStore(
                         currentTractionGoal == null -> throw WorkoutStoreExceptions.NoTractionGoalAtStartOfSetException
                         currentDurationGoal == null -> throw WorkoutStoreExceptions.NoDurationGoalAtStartOfSetException
                         else -> {
-                            val (newState, workoutProgress) = state.value.forSetStart(startTime = timestampProvider.getTimeMillis())
-                            state.value = newState
                             // Start the set and count down time
-                            val workTimeCountdown = launch {
-                                while (state.value.timeToWork > 0) {
-                                    delay(TICKS)
-                                    val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                                    val timeToWork = currentDurationGoal - timeDone
-                                    state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
-                                }
-                            }
-                            workTimeCountdown.invokeOnCompletion {
-                                launch {
-                                    sideEffect.emit(WorkoutSideEffect.SetFinished(
-                                        workoutProgress = workoutProgress,
-                                        tractionGoal = currentTractionGoal,
-                                    ))
-                                }
-                                state.value = state.value.copy(working = false)
-                                dispatch(WorkoutAction.StartRest)
-                            }
+                            startWorkCountDown(
+                                currentTractionGoal = currentTractionGoal,
+                                currentDurationGoal = currentDurationGoal
+                            )
                         }
                     }
                 }
                 is WorkoutAction.StartRest -> {
-                    val (newState, workoutProgress) = state.value.forRest(timestampProvider.getTimeMillis())
-                    state.value = newState
-                    val restTimeCounter = launch {
-                        while (state.value.timeToRest > 0) {
-                            delay(TICKS)
-                            val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                            val timeToRest = workoutProgress.activeSet().restTime - timeDone
-                            state.value = state.value.copy(timeToRest = if(timeToRest > 0) timeToRest else 0)
-                        }
-                    }
-                    restTimeCounter.invokeOnCompletion {
-                        dispatch(WorkoutAction.FinishSet)
-                    }
+                    startRestCountDown()
                 }
                 is WorkoutAction.FinishSet -> {
                     state.value.forNextSet()?.let {
@@ -153,7 +117,51 @@ class WorkoutStore(
                 }
             }
         } catch (exception: Exception) {
-            launchError(WorkoutSideEffect.Error(exception))
+            launch {
+                sideEffect.emit(WorkoutSideEffect.Error(exception))
+            }
+        }
+    }
+
+    private fun startWorkCountDown(
+        currentTractionGoal: Long,
+        currentDurationGoal: Long,
+    ) {
+        val (newState, workoutProgress) = state.value.forSetStart(startTime = timestampProvider.getTimeMillis())
+        state.value = newState
+        val workTimeCountdown = launch {
+            while (state.value.timeToWork > 0) {
+                delay(TICKS)
+                val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
+                val timeToWork = currentDurationGoal - timeDone
+                state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
+            }
+        }
+        workTimeCountdown.invokeOnCompletion {
+            launch {
+                sideEffect.emit(WorkoutSideEffect.SetFinished(
+                    workoutProgress = workoutProgress,
+                    tractionGoal = currentTractionGoal,
+                ))
+            }
+            state.value = state.value.copy(working = false)
+            dispatch(WorkoutAction.StartRest)
+        }
+    }
+
+    private fun startRestCountDown() {
+        val (newState, workoutProgress) = state.value.forRest(timestampProvider.getTimeMillis())
+        state.value = newState
+        val restTimeCounter = launch {
+            while (state.value.timeToRest > 0) {
+                delay(TICKS)
+                val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
+                val timeToRest = workoutProgress.activeSet().restTime - timeDone
+                state.value = state.value.copy(timeToRest = if(timeToRest > 0) timeToRest else 0)
+            }
+        }
+        restTimeCounter.invokeOnCompletion {
+            dispatch(WorkoutAction.FinishSet)
         }
     }
 
