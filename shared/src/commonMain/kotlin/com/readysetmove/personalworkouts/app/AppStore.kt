@@ -110,17 +110,7 @@ class AppStore(
                     }
                     else -> {
                         workoutState?.workoutProgress?.activeSet()?.tractionGoal?.let { currentTractionGoal ->
-                            launch {
-                                // handle max sets with 0 weight starting at 5
-                                val tractionGoalThreshold = if(currentTractionGoal>0f) currentTractionGoal*.8f else 5f
-                                // start tracking as soon as we have relevant traction delivered
-                                deviceStore.observeState().first { deviceState ->
-                                    // start countdown and tracking as soon as we hit relevant weight
-                                    // TODO: what if we don't hit the minimal goal?
-                                    deviceState.traction*1000 >= tractionGoalThreshold
-                                }
-                                workoutStore.dispatch(WorkoutAction.StartSet)
-                            }
+                            listenForSetStart(currentTractionGoal)
                             // TODO: pull up tracking! Separate into WorkoutResultsStore?
                             startTracking()
                             state.value = state.value.copy(isWaitingToHitTractionGoal = true)
@@ -133,6 +123,19 @@ class AppStore(
         }
     }
 
+    private fun listenForSetStart(currentTractionGoal: Long) {
+        launch {
+            // handle max sets with 0 weight starting at 5
+            val tractionGoalThreshold = if(currentTractionGoal>0) currentTractionGoal*.8f else 5f
+            // start tracking as soon as we have relevant traction delivered
+            deviceStore.observeState().first { deviceState ->
+                // start countdown and tracking as soon as we hit relevant weight
+                // TODO: what if we don't hit the minimal goal?
+                deviceState.traction*1000 >= tractionGoalThreshold
+            }
+            workoutStore.dispatch(WorkoutAction.StartSet)
+        }
+    }
     private fun startTracking() {
         launch {
             workoutStore.observeSideEffect()
