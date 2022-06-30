@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -26,14 +27,20 @@ object WorkoutOverviewScreen {
 }
 
 @Composable
-fun WorkoutOverviewScreen(workout: Workout?, onStartWorkout: () -> Unit) {
+fun WorkoutOverviewScreen(userName: String, workout: Workout?, onStartWorkout: () -> Unit, onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout_overview__screen_title)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = title) },
-                Modifier.semantics { contentDescription = title }
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.navigation__back))
+                    }
+                },
+                modifier = Modifier.semantics { contentDescription = title }
             )
         },
         floatingActionButton = {
@@ -54,7 +61,7 @@ fun WorkoutOverviewScreen(workout: Workout?, onStartWorkout: () -> Unit) {
             .padding(AppTheme.spacings.md)) {
             if (workout == null) return@Column Text(text = "No workout set")
 
-            WorkoutOverviewCard(stringResource(R.string.workout_overview__todays_workout_title),
+            WorkoutOverviewCard("Hi $userName",
                 workout = workout)
         }
     }
@@ -82,7 +89,8 @@ fun PreviewWorkoutOverviewScreen() {
                     set(Set(65000, duration = 12000), repeat = 3)
                 }
             },
-            onStartWorkout = {}
-        )
+            onStartWorkout = {},
+            userName = "Bob"
+        ) {}
     }
 }

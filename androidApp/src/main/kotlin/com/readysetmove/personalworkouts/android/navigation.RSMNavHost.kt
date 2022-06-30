@@ -124,8 +124,10 @@ fun RSMNavHost(navController: NavHostController) {
         }
         composable(route = WorkoutOverviewScreen.ROUTE) {
             WorkoutOverviewScreen(
-                appState.value.workout,
-                onStartWorkout = { appStore.dispatch(AppAction.StartWorkout) }
+                userName = appState.value.user?.displayName ?: "Not logged in",
+                workout = appState.value.workout,
+                onStartWorkout = { appStore.dispatch(AppAction.StartWorkout) },
+                onNavigateBack = { navController.navigate(LoginScreen.ROUTE) }
             )
         }
         composable(route = SettingsScreen.ROUTE) {

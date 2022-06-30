@@ -7,15 +7,15 @@ interface IsWorkoutRepository {
 class WorkoutRepository: IsWorkoutRepository {
     override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
         return when(userId) {
-            "Flo" -> WorkoutBuilder.workout {
-                exercise("Deadlift", position = 6f) {
-                    warmup(xMin = 30, min = 45, med = 60, max = 90)
-                    set(Set(90000, duration = 15000))
-                    set(Set(90000, duration = 12000), repeat = 3)
+            "grT5yFPAYtREAP71zVFS3KTiST62" -> WorkoutBuilder.workout {
+                exercise("Deadlift", position = 0f) {
+                    warmup(xMin = 30, min = 60, med = 90, max = 120)
+                    set(Set(120000, duration = 15000), repeat = 2)
+                    set(Set(120000, duration = 12000), repeat = 2)
                 }
-                exercise("Drag Curls", position = 18f) {
-                    warmup(xMin = 7, min = 10, med = 14, max = 19)
-                    set(Set(19000, duration = 6000), repeat = 5)
+                exercise("Drag Curls", position = 5f) {
+                    warmup(xMin = 10, min = 15, med = 20, max = 35)
+                    set(Set(35000, duration = 9000), repeat = 4)
                 }
             }
             "Jose" -> WorkoutBuilder.workout {
