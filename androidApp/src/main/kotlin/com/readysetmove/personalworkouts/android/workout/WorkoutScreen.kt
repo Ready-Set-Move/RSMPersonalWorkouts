@@ -3,8 +3,9 @@ package com.readysetmove.personalworkouts.android.workout
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -54,7 +55,6 @@ fun WorkoutScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier
-            .verticalScroll(scrollState)
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
             Text(text = exercise.name, style = AppTheme.typography.h3)
@@ -67,8 +67,12 @@ fun WorkoutScreen(
                 Text(text = "Start Set")
             }
             Text(text = "Max: %.1f".format(latestTractions?.maxByOrNull { it.value }?.value ?: 0.0))
-            latestTractions?.map {
-                Text(text = "%.1f".format(it.value))
+            latestTractions?.let { tractions ->
+                LazyColumn {
+                    items(tractions) { traction ->
+                        Text(text = "%.1f @ %.1f".format(traction.value, traction.timestamp/1000f))
+                    }
+                }
             }
         }
     }
