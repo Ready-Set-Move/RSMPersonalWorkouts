@@ -38,6 +38,8 @@ sealed class AppSideEffect : Effect {
     object NoSetInProgress : AppSideEffect()
 }
 
+// TODO: implement SettingsStore
+// TODO: implement UserStore to handle Firebase logic
 class AppStore(
     initialState: AppState = AppState(),
     private val workoutRepository: IsWorkoutRepository,
@@ -153,6 +155,8 @@ class AppStore(
                             workoutResultsRepository.storeResults(it)
                         }
                     }
+                    // TODO: make this optional via settings
+                    dispatch(AppAction.StartNextSet)
                     true
                 }
         }
@@ -170,6 +174,7 @@ fun AppState.updateWithResults(
     if (workout == null) return this
 
     // TODO: segment tracked data in ramp up < work > ramp down phases
+    //  also calculate min | max | median of workout phase
     // tractions need timestamps relative to beginning of first traction
     val setStart = tractions.first().timestamp
     val setResult = SetResult(
