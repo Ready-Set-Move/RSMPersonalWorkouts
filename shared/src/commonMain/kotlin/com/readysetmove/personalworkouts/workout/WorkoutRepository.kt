@@ -7,6 +7,7 @@ interface IsWorkoutRepository {
 class WorkoutRepository: IsWorkoutRepository {
     override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
         return when(userId) {
+            // Flo
             "grT5yFPAYtREAP71zVFS3KTiST62" -> WorkoutBuilder.workout {
                 exercise("Deadlift", position = 0f) {
                     warmup(xMin = 30, min = 60, med = 90, max = 120)
@@ -47,21 +48,26 @@ class WorkoutRepository: IsWorkoutRepository {
                     assessmentTest(min = 25, med = 35, max = 55)
                 }
             }
+            // Rob up to date
             "akmgotyWSNUxYIfEfqUOA9trEDv1" -> WorkoutBuilder.workout {
-                exercise("Shrugs", position = 7f) {
-                    warmup(xMin = 30, min = 50, med = 75, max = 100)
-                    set(Set(100000), repeat = 6)
+                exercise("Shrugs", position = 0f) {
+                    warmup(min = 50, med = 75, max = 100)
+                    set(Set(100000, duration = 12000), repeat = 3)
                 }
-                exercise("Calf Lifts", position = 7f) {
+                exercise("Calf Lifts", position = 0f) {
                     warmup(min = 30, med = 45, max = 65)
-                    set(Set(65000, duration = 15000), repeat = 1)
-                    set(Set(65000, duration = 12000), repeat = 3)
+                    set(Set(65000, duration = 15000), repeat = 3)
+                    set(Set(65000, duration = 12000), repeat = 1)
                 }
-                exercise("Front Press", position = 16f) {
-                    warmup(min = 25, med = 40, max = 55)
-                    set(Set(55000), repeat = 4)
+                exercise("Drag Curls", position = 16f) {
+                    warmup(xMin = 10, min = 18, med = 25, max = 37)
+                    set(Set(37000, duration = 6000), repeat = 5)
                 }
-                exercise("Rotator Cuff Extensions", position = 1.5f) {
+//                exercise("Front Press", position = 16f) {
+//                    warmup(min = 25, med = 40, max = 55)
+//                    set(Set(55000), repeat = 4)
+//                }
+                exercise("Rotator Cuff Extensions", position = -1f) {
                     warmup(xMin = 5, min = 5, med = 8, max = 11)
                     set(Set(11000), repeat = 4)
                 }
