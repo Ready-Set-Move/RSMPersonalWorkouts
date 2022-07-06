@@ -1,6 +1,8 @@
 plugins {
     kotlin("multiplatform")
     kotlin("native.cocoapods")
+    // TODO: https://github.com/Kotlin/kotlinx.serialization#android ProGuard Rules
+    kotlin("plugin.serialization") version "1.6.21"
     id("com.android.library")
 }
 
@@ -32,6 +34,10 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 // Napier logging
                 implementation(libs.napier)
+                // Firebase
+                implementation(libs.firebase.kotlin.firestore)
+                // Serialization
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
             }
         }
         val commonTest by getting {

@@ -1,5 +1,8 @@
 package com.readysetmove.personalworkouts.workout
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Workout(val id: String, val exercises: List<Exercise>, val comment: String)
 
 fun Workout.throwIfNotValid(): Boolean {

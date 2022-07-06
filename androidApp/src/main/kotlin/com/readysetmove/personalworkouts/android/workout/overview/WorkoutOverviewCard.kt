@@ -91,20 +91,20 @@ fun PreviewWorkoutOverviewCard() {
     AppTheme {
         androidx.compose.material.Surface {
             WorkoutOverviewCard(title = "Your Workout", workout = WorkoutBuilder.workout {
-                exercise("Shrugs", position = 7f) {
+                exercise("Shrugs", position = "7") {
                     warmup(xMin = 30, min = 50, med = 75, max = 100)
                     set(Set(100000), repeat = 6)
                 }
-                exercise("Calf Lifts", position = 7f) {
+                exercise("Calf Lifts", position = "7") {
                     warmup(min = 30, med = 45, max = 65)
                     set(Set(65000, duration = 15000), repeat = 1)
                     set(Set(65000, duration = 12000), repeat = 3)
                 }
-                exercise("Front Press", position = 16f) {
+                exercise("Front Press", position = "16") {
                     warmup(min = 25, med = 40, max = 55)
                     set(Set(55000), repeat = 4)
                 }
-                exercise("Rotator Cuff Extensions", position = 1.5f) {
+                exercise("Rotator Cuff Extensions", position = "1.5") {
                     warmup(xMin = 5, min = 5, med = 8, max = 11)
                     set(Set(11000), repeat = 4)
                 }

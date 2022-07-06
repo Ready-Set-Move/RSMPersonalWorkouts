@@ -58,9 +58,9 @@ fun WorkoutScreen(
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)) {
             Text(text = exercise.name, style = AppTheme.typography.h3)
-            Text(text = "Goal: ${set.tractionGoal/1000} kg")
-            Text(text = "Position: %.1f".format(exercise.position))
-            Text(text = "%.1f".format(currentLoad-set.tractionGoal/1000), style = AppTheme.typography.h1)
+            Text(text = "Goal: ${set.tractionGoal} kg")
+            Text(text = "Position: ${exercise.position}")
+            Text(text = "${currentLoad - set.tractionGoal}", style = AppTheme.typography.h1)
             Text(text = "${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)}s", style = AppTheme.typography.h1)
             Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
             Button(onClick = onStartSet, enabled = !setInProgress) {
@@ -89,9 +89,9 @@ fun WorkoutScreen(
 fun PreviewWorkoutScreen() {
     AppTheme {
         WorkoutScreen(
-            exercise = ExerciseBuilder(name = "Rows", comment = "Rows Cmt", position = 6.5f).build(),
-            set = Set(tractionGoal = 50000, duration = 6000, restTime = 5000),
-            timeToWork = 6000,
+            exercise = ExerciseBuilder(name = "Rows", comment = "Rows Cmt", position = "6.5").build(),
+            set = Set(tractionGoal = 50, duration = 6, restTime = 5),
+            timeToWork = 6,
             timeToRest = 0,
             onStartSet = {},
             onNavigateBack = {},

@@ -112,7 +112,7 @@ class AppStore(
                     }
                     else -> {
                         workoutState?.workoutProgress?.activeSet()?.tractionGoal?.let { currentTractionGoal ->
-                            listenForSetStart(currentTractionGoal)
+                            listenForSetStart(currentTractionGoal*1000L)
                             // TODO: pull up tracking! Separate into WorkoutResultsStore?
                             startTracking()
                             state.value = state.value.copy(isWaitingToHitTractionGoal = true)

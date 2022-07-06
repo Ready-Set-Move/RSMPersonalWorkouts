@@ -164,10 +164,11 @@ class WorkoutStore(
         val (newState, workoutProgress) = state.value.forRest(timestampProvider.getTimeMillis())
         state.value = newState
         val restTimeCounter = launch {
+            val restDuration = workoutProgress.activeSet().restTime*1000L
             while (state.value.timeToRest > 0) {
                 delay(TICKS)
                 val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                val timeToRest = workoutProgress.activeSet().restTime - timeDone
+                val timeToRest = restDuration - timeDone
                 state.value = state.value.copy(timeToRest = if(timeToRest > 0) timeToRest else 0)
             }
         }

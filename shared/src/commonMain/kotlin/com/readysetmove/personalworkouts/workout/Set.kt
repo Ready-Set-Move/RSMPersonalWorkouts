@@ -1,3 +1,6 @@
 package com.readysetmove.personalworkouts.workout
 
-data class Set(val tractionGoal: Long, val duration: Long = 6000, val restTime: Long = 30000)
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Set(val tractionGoal: Int, val duration: Int = 6, val restTime: Int = 30)

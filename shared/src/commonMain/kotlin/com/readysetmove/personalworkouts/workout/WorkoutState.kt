@@ -8,10 +8,10 @@ object WorkoutStateFactory {
             workoutProgress = WorkoutProgress(
                 workout = workout,
             ),
-            timeToWork = firstSet.duration,
+            timeToWork = firstSet.duration*1000L,
             timeToRest = 0,
-            tractionGoal = firstSet.tractionGoal,
-            durationGoal = firstSet.duration,
+            tractionGoal = firstSet.tractionGoal*1000L,
+            durationGoal = firstSet.duration*1000L,
         )
 }
 
@@ -27,54 +27,15 @@ data class WorkoutState(
 
 fun WorkoutState.forWorkoutProgress(workoutProgress: WorkoutProgress): WorkoutState {
     val currentSet = workoutProgress.activeSet()
+    val durationInMs = currentSet.duration*1000L
     return copy(
         workoutProgress = workoutProgress,
         timeToRest = 0,
-        timeToWork = currentSet.duration,
-        tractionGoal = currentSet.tractionGoal,
-        durationGoal = currentSet.duration,
+        timeToWork = durationInMs,
+        tractionGoal = currentSet.tractionGoal*1000L,
+        durationGoal = durationInMs,
     )
 }
-
-fun WorkoutState.forNextExercise(): WorkoutState {
-    if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
-
-    val nextExerciseIndex = workoutProgress.activeExerciseIndex + 1
-    val (tractionGoal, duration) = workoutProgress.workout.exercises[nextExerciseIndex].sets.first()
-    return copy(
-        workoutProgress = workoutProgress.copy(
-            activeExerciseIndex = nextExerciseIndex,
-            activeSetIndex = 0,
-        ),
-        timeToRest = 0,
-        timeToWork = duration,
-        tractionGoal = tractionGoal,
-        durationGoal = duration,
-    )
-}
-
-//fun WorkoutState.forNextSet(): WorkoutState? {
-//    if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
-//    // was this the last set of the exercise? If so finish the exercise...
-//    val activeExercise = workoutProgress.activeExercise()
-//    if (workoutProgress.activeSet() === activeExercise.sets.last()) {
-//        Napier.d("Last set of ${activeExercise.name} finished.")
-//        return null
-//    }
-//    // ...otherwise set active set to next set
-//    val newWorkoutProgress = workoutProgress.copy(
-//        activeSetIndex = workoutProgress.activeSetIndex + 1
-//    )
-//    val nextSet = newWorkoutProgress.activeSet()
-//    Napier.d("Set ${workoutProgress.activeSetIndex} of ${activeExercise.name} finished. Starting $nextSet.")
-//    return copy(
-//        workoutProgress = newWorkoutProgress,
-//        timeToRest = 0,
-//        timeToWork = nextSet.duration,
-//        tractionGoal = nextSet.tractionGoal,
-//        durationGoal = nextSet.duration
-//    )
-//}
 
 fun WorkoutState.forSetStart(startTime: Long): Pair<WorkoutState, WorkoutProgress> {
     if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
@@ -89,7 +50,7 @@ fun WorkoutState.forRest(startTime: Long): Pair<WorkoutState, WorkoutProgress> {
     if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
 
     return copy(
-        timeToRest = workoutProgress.activeSet().restTime,
+        timeToRest = workoutProgress.activeSet().restTime*1000L,
         timeToWork = 0,
         startTime = startTime,
     ) to workoutProgress

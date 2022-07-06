@@ -1,26 +1,26 @@
 package com.readysetmove.personalworkouts.workout
 
-class ExerciseBuilder(val name: String, val comment: String, val position: Float) {
+class ExerciseBuilder(val name: String, val comment: String, val position: String) {
     private val sets = mutableListOf<Set>()
 
-    fun warmup(min: Long, med: Long, max: Long, xMin: Long? = null) {
+    fun warmup(min: Int, med: Int, max: Int, xMin: Int? = null) {
         if (xMin != null) {
-            sets.add(Set(tractionGoal = xMin*1000, duration = 15000, 5000))
+            sets.add(Set(tractionGoal = xMin, duration = 15, 5))
         }
         sets.addAll(setOf(
-            Set(tractionGoal = min*1000, duration = 10000, restTime = 10000),
-            Set(tractionGoal = med*1000, duration = 5000, restTime = 15000),
-            Set(tractionGoal = max*1000, duration = 1000),
+            Set(tractionGoal = min, duration = 10, restTime = 10),
+            Set(tractionGoal = med, duration = 5, restTime = 15),
+            Set(tractionGoal = max, duration = 1),
         ))
     }
 
-    fun assessmentTest(min: Long, med: Long, max: Long) {
+    fun assessmentTest(min: Int, med: Int, max: Int) {
         sets.addAll(setOf(
-            Set(tractionGoal = min*1000, duration = 15000, restTime = 5000),
-            Set(tractionGoal = med*1000, duration = 10000, restTime = 15000),
-            Set(tractionGoal = max*1000, duration = 5000),
+            Set(tractionGoal = min, duration = 15, restTime = 5),
+            Set(tractionGoal = med, duration = 10, restTime = 15),
+            Set(tractionGoal = max, duration = 5),
         ))
-        set(Set(max*1000), repeat = 4)
+        set(Set(max), repeat = 4)
     }
 
     fun set(set: Set, repeat: Int = 1) {
@@ -60,7 +60,7 @@ class WorkoutBuilder(private val id: String, val comment: String) {
     fun exercise(
         name: String = "TESTCERCISE",
         comment: String = "$name TEST_COMMENT",
-        position: Float = 0f,
+        position: String = "0",
         init: ExerciseBuilder.() -> Unit
     ): ExerciseBuilder {
         val builder = ExerciseBuilder(
