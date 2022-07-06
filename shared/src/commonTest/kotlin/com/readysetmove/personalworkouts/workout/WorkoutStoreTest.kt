@@ -44,6 +44,8 @@ class WorkoutStoreTest {
             expect { restingWorkout.copy(timeToRest = setRestTime, startTime = 110) }
             expect { restingWorkout.copy(timeToRest = setRestTime-10, startTime = 110) }
             expect { restingWorkout.copy(timeToRest = 0, startTime = 110) }
+            // the time stays at the last started rest until the next StartSet action
+            expect { workoutStartState.copy(startTime = 110) }
         }
    }
 
@@ -70,12 +72,13 @@ class WorkoutStoreTest {
             expect { WorkoutState() }
             dispatch { WorkoutAction.StartWorkout(workout) }
             timestampProvider.timestamps.add(0)
-            var currentState = expect { WorkoutState(
+            val workoutStartState = WorkoutState(
                 workoutProgress = workoutStartProgress,
                 tractionGoal = 10,
                 durationGoal = 15000,
                 timeToWork = 15000,
-            ) }
+            )
+            var currentState = expect { workoutStartState }
             step("Runs the first set of the first exercise") {
                 dispatch { WorkoutAction.StartSet }
                 /* start working */
@@ -253,6 +256,8 @@ class WorkoutStoreTest {
                 currentState = expect { currentState.copy(
                     timeToRest = 0,
                 ) }
+                // the time stays at the last started rest until the next StartSet action
+                expect { workoutStartState.copy(startTime = 130000) }
             }
         }
 

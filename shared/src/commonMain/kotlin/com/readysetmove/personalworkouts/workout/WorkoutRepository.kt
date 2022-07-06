@@ -11,12 +11,12 @@ class WorkoutRepository: IsWorkoutRepository {
             "grT5yFPAYtREAP71zVFS3KTiST62" -> WorkoutBuilder.workout {
                 exercise("Deadlift", position = 0f) {
                     warmup(xMin = 30, min = 60, med = 90, max = 120)
-                    set(Set(120000, duration = 15000), repeat = 2)
-                    set(Set(120000, duration = 12000), repeat = 2)
+                    set(Set(120000, duration = 15000), repeat = 3)
+                    set(Set(120000, duration = 12000), repeat = 1)
                 }
                 exercise("Drag Curls", position = 5f) {
                     warmup(xMin = 10, min = 15, med = 20, max = 35)
-                    set(Set(35000, duration = 9000), repeat = 4)
+                    set(Set(35000, duration = 12000), repeat = 3)
                 }
             }
             "Jose" -> WorkoutBuilder.workout {
@@ -48,20 +48,23 @@ class WorkoutRepository: IsWorkoutRepository {
                     assessmentTest(min = 25, med = 35, max = 55)
                 }
             }
-            // Rob up to date
+            // Rob 5.7
             "akmgotyWSNUxYIfEfqUOA9trEDv1" -> WorkoutBuilder.workout {
                 exercise("Shrugs", position = 0f) {
                     warmup(min = 50, med = 75, max = 100)
-                    set(Set(100000, duration = 12000), repeat = 3)
+                    set(Set(100000, duration = 12000), repeat = 4)
                 }
-                exercise("Calf Lifts", position = 0f) {
-                    warmup(min = 30, med = 45, max = 65)
-                    set(Set(65000, duration = 15000), repeat = 3)
-                    set(Set(65000, duration = 12000), repeat = 1)
+//                exercise("Calf Lifts", position = 0f) {
+//                    warmup(min = 30, med = 45, max = 65)
+//                    set(Set(65000, duration = 15000), repeat = 3)
+//                    set(Set(65000, duration = 12000), repeat = 1)
+//                }
+                exercise("Abductor Extensions", position = 0f) {
+                    assessmentTest(5, 10, 15)
                 }
                 exercise("Drag Curls", position = 16f) {
                     warmup(xMin = 10, min = 18, med = 25, max = 37)
-                    set(Set(37000, duration = 6000), repeat = 5)
+                    set(Set(37000, duration = 9000), repeat = 4)
                 }
 //                exercise("Front Press", position = 16f) {
 //                    warmup(min = 25, med = 40, max = 55)
@@ -69,7 +72,7 @@ class WorkoutRepository: IsWorkoutRepository {
 //                }
                 exercise("Rotator Cuff Extensions", position = -1f) {
                     warmup(xMin = 5, min = 5, med = 8, max = 11)
-                    set(Set(11000), repeat = 4)
+                    set(Set(11000), repeat = 5)
                 }
             }
             else -> return WorkoutBuilder.workout {

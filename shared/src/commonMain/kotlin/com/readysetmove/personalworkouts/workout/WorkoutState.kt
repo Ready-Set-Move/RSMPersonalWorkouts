@@ -1,7 +1,6 @@
 package com.readysetmove.personalworkouts.workout
 
 import com.readysetmove.personalworkouts.state.State
-import io.github.aakira.napier.Napier
 
 object WorkoutStateFactory {
     fun workoutStateOfNewWorkout(workout: Workout, firstSet: Set) =
@@ -26,6 +25,17 @@ data class WorkoutState(
     val startTime: Long = 0,
 ) : State
 
+fun WorkoutState.forWorkoutProgress(workoutProgress: WorkoutProgress): WorkoutState {
+    val currentSet = workoutProgress.activeSet()
+    return copy(
+        workoutProgress = workoutProgress,
+        timeToRest = 0,
+        timeToWork = currentSet.duration,
+        tractionGoal = currentSet.tractionGoal,
+        durationGoal = currentSet.duration,
+    )
+}
+
 fun WorkoutState.forNextExercise(): WorkoutState {
     if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
 
@@ -43,28 +53,28 @@ fun WorkoutState.forNextExercise(): WorkoutState {
     )
 }
 
-fun WorkoutState.forNextSet(): WorkoutState? {
-    if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
-    // was this the last set of the exercise? If so finish the exercise...
-    val activeExercise = workoutProgress.activeExercise()
-    if (workoutProgress.activeSet() === activeExercise.sets.last()) {
-        Napier.d("Last set of ${activeExercise.name} finished.")
-        return null
-    }
-    // ...otherwise set active set to next set
-    val newWorkoutProgress = workoutProgress.copy(
-        activeSetIndex = workoutProgress.activeSetIndex + 1
-    )
-    val nextSet = newWorkoutProgress.activeSet()
-    Napier.d("Set ${workoutProgress.activeSetIndex} of ${activeExercise.name} finished. Starting $nextSet.")
-    return copy(
-        workoutProgress = newWorkoutProgress,
-        timeToRest = 0,
-        timeToWork = nextSet.duration,
-        tractionGoal = nextSet.tractionGoal,
-        durationGoal = nextSet.duration
-    )
-}
+//fun WorkoutState.forNextSet(): WorkoutState? {
+//    if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException
+//    // was this the last set of the exercise? If so finish the exercise...
+//    val activeExercise = workoutProgress.activeExercise()
+//    if (workoutProgress.activeSet() === activeExercise.sets.last()) {
+//        Napier.d("Last set of ${activeExercise.name} finished.")
+//        return null
+//    }
+//    // ...otherwise set active set to next set
+//    val newWorkoutProgress = workoutProgress.copy(
+//        activeSetIndex = workoutProgress.activeSetIndex + 1
+//    )
+//    val nextSet = newWorkoutProgress.activeSet()
+//    Napier.d("Set ${workoutProgress.activeSetIndex} of ${activeExercise.name} finished. Starting $nextSet.")
+//    return copy(
+//        workoutProgress = newWorkoutProgress,
+//        timeToRest = 0,
+//        timeToWork = nextSet.duration,
+//        tractionGoal = nextSet.tractionGoal,
+//        durationGoal = nextSet.duration
+//    )
+//}
 
 fun WorkoutState.forSetStart(startTime: Long): Pair<WorkoutState, WorkoutProgress> {
     if (workoutProgress == null) throw WorkoutStoreExceptions.WorkoutNotSetException

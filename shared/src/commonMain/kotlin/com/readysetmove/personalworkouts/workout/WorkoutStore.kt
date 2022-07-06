@@ -4,6 +4,7 @@ import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.Store
+import com.readysetmove.personalworkouts.workout.WorkoutAction.*
 import com.readysetmove.personalworkouts.workout.WorkoutStateFactory.workoutStateOfNewWorkout
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +19,8 @@ import kotlin.coroutines.CoroutineContext
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workout: Workout): WorkoutAction()
     object FinishSet: WorkoutAction()
-    object FinishExercise: WorkoutAction()
+    object FinishWorkout: WorkoutAction()
+    data class GoToSet(val workoutProgress: WorkoutProgress): WorkoutAction()
     object StartSet: WorkoutAction()
     object StartRest: WorkoutAction()
     data class SetTractionGoal(val tractionGoal: Long): WorkoutAction()
@@ -42,7 +44,8 @@ sealed class WorkoutStoreExceptions : Exception() {
 sealed class WorkoutSideEffect : Effect {
     data class Error(val error: Exception) : WorkoutSideEffect()
     object NewWorkoutStarted : WorkoutSideEffect()
-    data class SetFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutSideEffect()
+    data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutSideEffect()
+    data class NewSetActivated(val workoutProgress: WorkoutProgress) : WorkoutSideEffect()
     object WorkoutFinished : WorkoutSideEffect()
 }
 
@@ -62,7 +65,7 @@ class WorkoutStore(
     override fun dispatch(action: WorkoutAction) {
         try {
             when(action) {
-                is WorkoutAction.StartWorkout -> {
+                is StartWorkout -> {
                     action.workout.throwIfNotValid()
 
                     state.value = workoutStateOfNewWorkout(
@@ -73,16 +76,19 @@ class WorkoutStore(
                         sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
                     }
                 }
-                is WorkoutAction.FinishExercise -> {
-                    when {
-                        state.value.workoutProgress.atLastExercise() -> launch {
-                            Napier.d("Last exercise finished. Emitting WorkoutFinished effect.")
-                            sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
-                        }
-                        else -> state.value = state.value.forNextExercise()
+                is GoToSet -> {
+                    state.value = state.value.forWorkoutProgress(action.workoutProgress)
+                    launch {
+                        sideEffect.emit(WorkoutSideEffect.NewSetActivated(action.workoutProgress))
                     }
                 }
-                is WorkoutAction.StartSet -> {
+                is FinishWorkout -> {
+                    launch {
+                        Napier.d("Last exercise finished. Emitting WorkoutFinished effect.")
+                        sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
+                    }
+                }
+                is StartSet -> {
                     val currentTractionGoal = state.value.tractionGoal
                     val currentDurationGoal = state.value.durationGoal
                     when {
@@ -97,20 +103,25 @@ class WorkoutStore(
                         }
                     }
                 }
-                is WorkoutAction.StartRest -> {
+                is StartRest -> {
                     startRestCountDown()
                 }
-                is WorkoutAction.FinishSet -> {
-                    state.value.forNextSet()?.let {
-                        state.value = it
-                    } ?: dispatch(WorkoutAction.FinishExercise)
+                is FinishSet -> {
+                    state.value.workoutProgress?.let { workoutProgress ->
+                        // get progress for next set or exercise
+                        dispatch(GoToSet(workoutProgress.forNextStep()))
+
+                        if (workoutProgress.atLastSetOfWorkout()) {
+                            dispatch(FinishWorkout)
+                        }
+                    } ?: throw WorkoutStoreExceptions.WorkoutNotSetException
                 }
-                is WorkoutAction.SetDurationGoal -> {
+                is SetDurationGoal -> {
                     if (state.value.working) return
 
                     state.value = state.value.copy(durationGoal = action.durationGoal)
                 }
-                is WorkoutAction.SetTractionGoal -> {
+                is SetTractionGoal -> {
                     if (state.value.working) return
 
                     state.value = state.value.copy(tractionGoal = action.tractionGoal)
@@ -139,13 +150,13 @@ class WorkoutStore(
         }
         workTimeCountdown.invokeOnCompletion {
             launch {
-                sideEffect.emit(WorkoutSideEffect.SetFinished(
+                sideEffect.emit(WorkoutSideEffect.WorkFinished(
                     workoutProgress = workoutProgress,
                     tractionGoal = currentTractionGoal,
                 ))
             }
             state.value = state.value.copy(working = false)
-            dispatch(WorkoutAction.StartRest)
+            dispatch(StartRest)
         }
     }
 
@@ -161,7 +172,7 @@ class WorkoutStore(
             }
         }
         restTimeCounter.invokeOnCompletion {
-            dispatch(WorkoutAction.FinishSet)
+            dispatch(FinishSet)
         }
     }
 

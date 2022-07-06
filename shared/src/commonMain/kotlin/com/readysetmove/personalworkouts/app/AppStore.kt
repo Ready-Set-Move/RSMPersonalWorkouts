@@ -141,7 +141,7 @@ class AppStore(
     private fun startTracking() {
         launch {
             workoutStore.observeSideEffect()
-                .filterIsInstance<WorkoutSideEffect.SetFinished>()
+                .filterIsInstance<WorkoutSideEffect.WorkFinished>()
                 .first { setFinishedEffect ->
                     deviceStore.dispatch(DeviceAction.StopTracking)
                     val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
@@ -155,7 +155,12 @@ class AppStore(
                             workoutResultsRepository.storeResults(it)
                         }
                     }
-                    // TODO: make this optional via settings
+                    true
+                }
+            workoutStore.observeSideEffect()
+                .filterIsInstance<WorkoutSideEffect.NewSetActivated>()
+                .first {
+                    // TODO: this will be changed to be triggered after user provided rating
                     dispatch(AppAction.StartNextSet)
                     true
                 }
