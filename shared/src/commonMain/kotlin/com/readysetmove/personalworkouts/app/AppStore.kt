@@ -69,6 +69,14 @@ class AppStore(
         state.value.user?.let {
             fetchWorkoutForUser(it)
         }
+        // TODO: reverse flow to call this directly
+        launch {
+            workoutStore.observeSideEffect()
+                .filterIsInstance<WorkoutSideEffect.NewSetActivated>()
+                .collect {
+                    dispatch(AppAction.StartNextSet)
+                }
+        }
     }
 
     private fun fetchWorkoutForUser(user: User) {
@@ -106,17 +114,17 @@ class AppStore(
                 }
             }
             is AppAction.StartNextSet -> {
-                when(state.value.workout) {
-                    null -> launch {
-                        sideEffect.emit(AppSideEffect.NoWorkoutSet)
-                    }
-                    else -> {
-                        workoutState?.workoutProgress?.activeSet()?.tractionGoal?.let { currentTractionGoal ->
+                workoutState.let {
+                    when(it) {
+                        is WorkoutState.WaitingToStartSet -> {
+                            val currentTractionGoal = it.workoutProgress.activeSet().tractionGoal
                             listenForSetStart(currentTractionGoal*1000L)
                             // TODO: pull up tracking! Separate into WorkoutResultsStore?
                             startTracking()
                             state.value = state.value.copy(isWaitingToHitTractionGoal = true)
-                        } ?: launch {
+                        }
+                        else -> launch {
+                            // TODO: this should be different effect
                             sideEffect.emit(AppSideEffect.NoSetInProgress)
                         }
                     }
@@ -155,13 +163,6 @@ class AppStore(
                             workoutResultsRepository.storeResults(it)
                         }
                     }
-                    true
-                }
-            workoutStore.observeSideEffect()
-                .filterIsInstance<WorkoutSideEffect.NewSetActivated>()
-                .first {
-                    // TODO: this will be changed to be triggered after user provided rating
-                    dispatch(AppAction.StartNextSet)
                     true
                 }
         }

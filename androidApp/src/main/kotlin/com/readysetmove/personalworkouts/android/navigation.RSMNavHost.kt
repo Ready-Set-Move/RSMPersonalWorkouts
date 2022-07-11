@@ -10,7 +10,6 @@ import android.content.IntentFilter
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
@@ -29,11 +28,8 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
 import com.readysetmove.personalworkouts.workout.WorkoutStore
-import com.readysetmove.personalworkouts.workout.activeExercise
-import com.readysetmove.personalworkouts.workout.activeSet
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
 
@@ -42,10 +38,7 @@ fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
     val appStore: AppStore by inject()
     val appState = appStore.observeState().collectAsState()
-    val deviceStore: IsDeviceStore by inject()
-    val deviceState = deviceStore.observeState().collectAsState()
     val workoutStore: WorkoutStore by inject()
-    val workoutState = workoutStore.observeState().collectAsState()
     val workoutSideEffects = workoutStore.observeSideEffect().collectAsState(null)
     val btStore: BluetoothStore by inject()
     val btState = btStore.observeState().collectAsState()
@@ -135,23 +128,9 @@ fun RSMNavHost(navController: NavHostController) {
         }
         composable(route = WorkoutScreen.ROUTE) {
             // TODO: extract workout parameters from route to deeplink to exercise & set
-
-            val workoutProgress = workoutState.value.workoutProgress
-                ?: return@composable Text(text = "No Workout set")
-
-            WorkoutScreen(
-                exercise = workoutProgress.activeExercise(),
-                set = workoutProgress.activeSet(),
-                currentLoad = deviceState.value.traction,
-                timeToWork = workoutState.value.timeToWork,
-                timeToRest = workoutState.value.timeToRest,
-                onStartSet = { appStore.dispatch(AppAction.StartNextSet) },
-                onNavigateBack = { navController.popBackStack() },
-                latestTractions = appState.value.latestSetResult?.tractions,
-                setInProgress = workoutState.value.working
-                        || workoutState.value.timeToRest > 0
-                        || appState.value.isWaitingToHitTractionGoal
-            )
+            WorkoutScreen {
+                navController.popBackStack()
+            }
         }
         composable(route = DeviceManagementOverviewScreen.ROUTE) {
             DeviceManagementOverviewScreen(onNavigateBack = {

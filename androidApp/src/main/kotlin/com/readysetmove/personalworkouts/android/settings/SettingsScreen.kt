@@ -25,7 +25,7 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.workout__screen_title)) },
+                title = { Text(stringResource(R.string.settings__screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack,

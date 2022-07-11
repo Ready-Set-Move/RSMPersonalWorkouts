@@ -17,11 +17,16 @@ fun WorkoutProgress?.atLastSetOfWorkout(): Boolean {
     return activeSet() === workout.exercises.last().sets.last()
 }
 
+fun WorkoutProgress?.atLastSetOfExercise(): Boolean {
+    if (this == null) return false
+    return activeSet() === activeExercise().sets.last()
+}
+
 fun WorkoutProgress.activeSet(): Set {
     return activeExercise().sets[activeSetIndex]
 }
 
-private fun WorkoutProgress.forNextExercise(): WorkoutProgress {
+fun WorkoutProgress.forNextExercise(): WorkoutProgress {
     // at the end > jump back to beginning
     val nextExerciseIndex = if(atLastSetOfWorkout()) 0 else activeExerciseIndex + 1
     return copy(
@@ -30,16 +35,13 @@ private fun WorkoutProgress.forNextExercise(): WorkoutProgress {
     )
 }
 
-fun WorkoutProgress.forNextStep(): WorkoutProgress {
-    val activeExercise = activeExercise()
-    val newProgress =
-        // was this the last set of the exercise? If so finish the exercise...
-        if (activeSet() === activeExercise.sets.last()) forNextExercise()
-        // ...otherwise set active set to next set
-        else copy(
-            activeSetIndex = activeSetIndex + 1
-        )
-    Napier.d("Returning new progress: $newProgress from $this.")
-    return newProgress
-}
+fun WorkoutProgress.forNextSet(): WorkoutProgress {
+    if (activeSet() === activeExercise().sets.last()) {
+        Napier.d("Already at last set, can't progress inside exercise from $this.")
+        return this
+    }
 
+    return copy(
+        activeSetIndex = activeSetIndex + 1
+    )
+}

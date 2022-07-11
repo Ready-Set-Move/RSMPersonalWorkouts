@@ -2,6 +2,7 @@ package com.readysetmove.personalworkouts.workout
 
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.firestore
+import io.github.aakira.napier.Napier
 
 interface IsWorkoutRepository {
     suspend fun fetchLatestWorkoutForUser(userId: String): Workout
@@ -10,8 +11,28 @@ interface IsWorkoutRepository {
 class WorkoutRepository: IsWorkoutRepository {
     private val db = Firebase.firestore
 
+    init {
+        db.useEmulator("10.0.2.2", 8080)
+        db.setSettings(persistenceEnabled = false)
+    }
+
     override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
         return when(userId) {
+            // Levi
+            "lZn5Z8lt6lVdIiFsoiHSqRbNi3u1" -> WorkoutBuilder.workout {
+                exercise("Bench Press", position = "18") {
+                    warmup(xMin = 10, min = 15, med = 20, max = 30)
+                    set(Set(30, duration = 6), repeat = 4)
+                }
+                exercise("Squat", position = "9") {
+                    warmup(min = 22, med = 35, max = 45)
+                    set(Set(45, duration = 12), repeat = 4)
+                }
+                exercise("Shrugs", position = "6") {
+                    warmup(min = 25, med = 35, max = 55)
+                    set(Set(55, duration = 9), repeat = 4)
+                }
+            }
             // Flo
             "grT5yFPAYtREAP71zVFS3KTiST62" -> WorkoutBuilder.workout {
                 exercise("Deadlift", position = "0") {
@@ -54,7 +75,7 @@ class WorkoutRepository: IsWorkoutRepository {
                 }
             }
             // Rob 5.7
-            "akmgotyWSNUxYIfEfqUOA9trEDv1" ->
+            "Rob" ->
 
                 WorkoutBuilder.workout {
                 exercise("Shrugs", position = "0") {
@@ -83,22 +104,22 @@ class WorkoutRepository: IsWorkoutRepository {
                 }
             }
             // Rob google user
-            "npt9ZyOesMaYEIaZjGJly8w7C773" -> {
-                db.collection("users").document("npt9ZyOesMaYEIaZjGJly8w7C773")
+//            "npt9ZyOesMaYEIaZjGJly8w7C773" -> {
+            "npt9ZyOesMaYEIaZjGJly8w7C773a" -> {
+                val document = db.collection("users").document("npt9ZyOesMaYEIaZjGJly8w7C773")
                     .collection("workouts")
-//                    .orderBy("id", direction = Direction.DESCENDING).limit(1)
-                    .get().documents[0].data()
+//                    .orderBy(FieldPath("users/workouts").documentId, direction = Direction.DESCENDING)
+                    .limit(1)
+                    .get().documents[0]
+                Napier.d("Document found for user $userId: ${document.id} | ${document.metadata}")
+                document.data()
             }
             else -> return WorkoutBuilder.workout {
                 exercise("Front Press", position = "19") {
-                    warmup(xMin = 8, min = 16, med = 24, max = 30)
-                    set(Set(30, duration = 12), repeat = 4)
+                    set(Set(30, duration = 3, restTime = 3), repeat = 2)
                 }
-                exercise("Squat", position = "5") {
-                    assessmentTest(min = 30, med = 45, max = 60)
-                }
-                exercise("Shrugs", position = "6") {
-                    assessmentTest(min = 25, med = 35, max = 55)
+                exercise("Ex 2", position = "Some position description") {
+                    set(Set(100, duration = 3, restTime = 3), repeat = 1)
                 }
             }
         }

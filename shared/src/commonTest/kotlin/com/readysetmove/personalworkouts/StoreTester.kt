@@ -54,19 +54,21 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
         }
         testScheduler.advanceUntilIdle()
         gatherStatesJob?.cancel()
-        if (initialState != null) {
-            // gathering always yields the initial state first so we may need to add it
-            // if this is a step running after previous steps
-            expects.add(0, initialState)
-        }
-        // TODO: enhance test failure output to to find errors faster (iterate over states?)
-        assertEquals(
-            expects,
-            values,
-            testerMessage,
-        )
         verifys.forEach {
             verify { it() }
+        }
+        if (expects.isNotEmpty()) {
+            if (initialState != null) {
+                // gathering always yields the initial state first so we may need to add it
+                // if this is a step running after previous steps
+                expects.add(0, initialState)
+            }
+            // TODO: enhance test failure output to to find errors faster (iterate over states?)
+            assertEquals(
+                expects,
+                values,
+                testerMessage,
+            )
         }
         var lastState = if (expects.isNotEmpty()) expects.last() else null
         steps.forEach {

@@ -1,26 +1,12 @@
 package com.readysetmove.personalworkouts.android.workout
 
-import android.content.res.Configuration
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.tooling.preview.Preview
-import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.device.Traction
-import com.readysetmove.personalworkouts.workout.Exercise
-import com.readysetmove.personalworkouts.workout.ExerciseBuilder
-import com.readysetmove.personalworkouts.workout.Set
+import androidx.compose.runtime.collectAsState
+import com.readysetmove.personalworkouts.app.AppStore
+import com.readysetmove.personalworkouts.device.IsDeviceStore
+import com.readysetmove.personalworkouts.workout.*
+import org.koin.androidx.compose.get
 
 object WorkoutScreen {
     const val ROUTE = "workout"
@@ -28,74 +14,57 @@ object WorkoutScreen {
 
 @Composable
 fun WorkoutScreen(
-    exercise: Exercise,
-    set: Set,
-    timeToWork: Long,
-    timeToRest: Long,
-    currentLoad: Float = 0f,
-    setInProgress: Boolean = false,
-    latestTractions: List<Traction>?,
-    onStartSet: () -> Unit,
+    appStore: AppStore = get(),
+    workoutStore: WorkoutStore = get(),
+    deviceStore: IsDeviceStore = get(),
     onNavigateBack: () -> Unit
 ) {
-    val scrollState = rememberScrollState()
-    val title = stringResource(R.string.workout__screen_title)
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.navigation__back))
-                    }
-                },
-                modifier = Modifier.semantics { contentDescription = title }
-            )
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .padding(AppTheme.spacings.md)) {
-            Text(text = exercise.name, style = AppTheme.typography.h3)
-            Text(text = "Goal: ${set.tractionGoal} kg")
-            Text(text = "Position: ${exercise.position}")
-            Text(text = "${currentLoad - set.tractionGoal}", style = AppTheme.typography.h1)
-            Text(text = "${if (timeToWork > 1000) timeToWork/1000 else "%.1f".format((timeToWork).toFloat()/1000)}s", style = AppTheme.typography.h1)
-            Text(text = "Rest: ${if (timeToRest > 1000) timeToRest/1000 else "%.1f ".format((timeToRest).toFloat()/1000)} s")
-            Button(onClick = onStartSet, enabled = !setInProgress) {
-                Text(text = "Start Set")
-            }
-            Text(text = "Max: %.1f".format(latestTractions?.maxByOrNull { it.value }?.value ?: 0.0))
-            latestTractions?.let { tractions ->
-                LazyColumn {
-                    items(tractions) { traction ->
-                        Text(text = "%.1f @ %.1f".format(traction.value, traction.timestamp/1000f))
-                    }
-                }
-            }
-        }
-    }
-}
+    val appState = appStore.observeState().collectAsState()
+    val workoutState = workoutStore.observeState().collectAsState()
+    val deviceState = deviceStore.observeState().collectAsState()
 
-@Preview(name = "Light Mode", widthDp = 1024)
-@Preview(
-    name = "Dark Mode",
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-    showBackground = true,
-    widthDp = 1024
-)
-@Composable
-fun PreviewWorkoutScreen() {
-    AppTheme {
-        WorkoutScreen(
-            exercise = ExerciseBuilder(name = "Rows", comment = "Rows Cmt", position = "6.5").build(),
-            set = Set(tractionGoal = 50, duration = 6, restTime = 5),
-            timeToWork = 6,
-            timeToRest = 0,
-            onStartSet = {},
-            onNavigateBack = {},
-            latestTractions = emptyList()
-        )
+    // TODO: we need more screens and states for exercise start and finish
+    workoutState.value.let { state ->
+        when(state) {
+            is WorkoutState.NoWorkout -> Text(text = "No workout started")
+            // TODO: Add exercise waiting layer to flow and auto start next set
+            is WorkoutState.WaitingToStartExercise ->
+                ExerciseOverviewScreen(
+                    exercise = state.workoutProgress.activeExercise(),
+                    onNavigateBack = onNavigateBack
+                ) {
+                workoutStore.dispatch(WorkoutAction.StartExercise)
+            }
+            is WorkoutState.WaitingToStartSet ->
+                WorkingScreen(
+                    tractionGoal = (state.tractionGoal/1000).toInt(),
+                    timeToWork = state.timeLeft,
+                    currentLoad = deviceState.value.traction,
+                )
+            is WorkoutState.Working ->
+                WorkingScreen(
+                    tractionGoal = (state.tractionGoal/1000).toInt(),
+                    timeToWork = state.timeLeft,
+                    currentLoad = deviceState.value.traction,
+                )
+            // TODO: merge resting with showing results and rating
+            is WorkoutState.Resting ->
+                RestingScreen(timeToRest = state.timeLeft)
+            is WorkoutState.SetFinished ->
+                SetResultsScreen(
+                    exercise = state.workoutProgress.activeExercise(),
+                    set = state.workoutProgress.activeSet(),
+                    latestTractions = appState.value.latestSetResult?.tractions,
+                    setIndex = state.workoutProgress.activeSetIndex,
+                ) {
+                    workoutStore.dispatch(WorkoutAction.RateSet(1))
+                }
+            is WorkoutState.ExerciseFinished ->
+                ExerciseResultsScreen(exercise = state.workoutProgress.activeExercise()) {
+                    workoutStore.dispatch(WorkoutAction.RateExercise(1))
+                }
+            is WorkoutState.WorkoutFinished ->
+                WorkoutFinishedScreen()
+        }
     }
 }

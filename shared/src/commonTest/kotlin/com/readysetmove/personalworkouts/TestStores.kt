@@ -30,7 +30,15 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
             workoutStore = workoutStore,
             deviceStore = deviceStore,
             mainDispatcher = this.coroutineContext,
-            workoutRepository = WorkoutRepository(),
+            workoutRepository = object: IsWorkoutRepository {
+                override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
+                    return WorkoutBuilder.workout {
+                        exercise {
+                            assessmentTest(20, 30, 40)
+                        }
+                    }
+                }
+            },
             workoutResultsRepository = WorkoutResultsRepository(),
         )
         val storeTester = StoreTester(

@@ -37,6 +37,23 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
             position = position,
         )
     }
+
+    companion object {
+        fun exercise(
+            name: String = "Testcercise",
+            comment: String = "Some comment",
+            position: String = "Zee position",
+            init: ExerciseBuilder.() -> Unit,
+        ): Exercise {
+            val builder = ExerciseBuilder(
+                name = name,
+                comment = comment,
+                position = position,
+            )
+            builder.init()
+            return builder.build()
+        }
+    }
 }
 
 class WorkoutBuilder(private val id: String, val comment: String) {

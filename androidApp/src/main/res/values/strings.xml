@@ -13,10 +13,15 @@
     <string name="expandable_card__less">Less</string>
     <string name="application__label">Ready Set Move – Personal Workouts</string>
     <string name="workout_overview__screen_title">Workout Overview</string>
-    <string name="settings__screen_title">Settings</string>
-    <string name="workout__screen_title">Active Workout</string>
+    <string name="workout_exercise_overview__title">Active Exercise</string>
+    <string name="workout_exercise_overview__start">Start Exercise</string>
+    <string name="workout_set_results__title">Set Results</string>
+    <string name="workout_set_results__rate">Rate Set</string>
+    <string name="workout_exercise_results__title">Exercise Results</string>
+    <string name="workout_exercise_results__rate">Rate Exercise</string>
     <string name="navigation__back">Go back</string>
     <string name="device_management_overview__screen_title">Devices</string>
     <string name="device_management_overview__scan">Scan for device</string>
     <string name="grant_permissions__screen_title">Permissions</string>
+    <string name="settings__screen_title">Settings</string>
 </resources>

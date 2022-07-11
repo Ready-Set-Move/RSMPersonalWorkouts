@@ -5,7 +5,6 @@ import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.WorkoutAction.*
-import com.readysetmove.personalworkouts.workout.WorkoutStateFactory.workoutStateOfNewWorkout
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -18,11 +17,13 @@ import kotlin.coroutines.CoroutineContext
 
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workout: Workout): WorkoutAction()
-    object FinishSet: WorkoutAction()
-    object FinishWorkout: WorkoutAction()
-    data class GoToSet(val workoutProgress: WorkoutProgress): WorkoutAction()
+    object StartExercise: WorkoutAction()
     object StartSet: WorkoutAction()
-    object StartRest: WorkoutAction()
+    object FinishWork: WorkoutAction()
+    object FinishSet: WorkoutAction()
+    data class RateSet(val rating: Int): WorkoutAction()
+    data class RateExercise(val rating: Int): WorkoutAction()
+    object FinishWorkout: WorkoutAction()
     data class SetTractionGoal(val tractionGoal: Long): WorkoutAction()
     data class SetDurationGoal(val durationGoal: Long): WorkoutAction()
 }
@@ -35,22 +36,20 @@ sealed class WorkoutExceptions : Exception() {
     ): WorkoutExceptions()
 }
 
-sealed class WorkoutStoreExceptions : Exception() {
-    object WorkoutNotSetException: WorkoutStoreExceptions()
-    object NoTractionGoalAtStartOfSetException: WorkoutExceptions()
-    object NoDurationGoalAtStartOfSetException: WorkoutExceptions()
-}
-
 sealed class WorkoutSideEffect : Effect {
     data class Error(val error: Exception) : WorkoutSideEffect()
     object NewWorkoutStarted : WorkoutSideEffect()
     data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutSideEffect()
+    data class SetRated(val workoutProgress: WorkoutProgress, val rating: Int) : WorkoutSideEffect()
+    data class ExerciseRated(val workoutProgress: WorkoutProgress, val rating: Int) : WorkoutSideEffect()
     data class NewSetActivated(val workoutProgress: WorkoutProgress) : WorkoutSideEffect()
     object WorkoutFinished : WorkoutSideEffect()
 }
 
+// TODO: revert action flow: Don't listen in app store to side effects instead explicitly
+//  trigger app store actions from here
 class WorkoutStore(
-    initialState: WorkoutState = WorkoutState(),
+    initialState: WorkoutState = WorkoutState.NoWorkout,
     private val timestampProvider: IsTimestampProvider,
     private val mainDispatcher: CoroutineContext,
 ):
@@ -66,65 +65,107 @@ class WorkoutStore(
         try {
             when(action) {
                 is StartWorkout -> {
+                    // TODO: workout time metrics (start + finish)
+                    // TODO: switch to result pattern
                     action.workout.throwIfNotValid()
 
-                    state.value = workoutStateOfNewWorkout(
-                        workout = action.workout,
-                        firstSet = action.workout.exercises.first().sets.first(),
-                    )
+                    state.value = state.value.startWorkout(workout = action.workout).getOrThrow()
                     launch {
                         sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
                     }
                 }
-                is GoToSet -> {
-                    state.value = state.value.forWorkoutProgress(action.workoutProgress)
-                    launch {
-                        sideEffect.emit(WorkoutSideEffect.NewSetActivated(action.workoutProgress))
+                is StartExercise -> {
+                    state.value = state.value.startExercise().getOrThrow().apply {
+                        launch {
+                            sideEffect.emit(WorkoutSideEffect.NewSetActivated(workoutProgress))
+                        }
+                    }
+                }
+                is StartSet -> {
+                    startWorkCountDown(
+                        state.value.startSet(startTime = timestampProvider.getTimeMillis())
+                            .getOrThrow()
+                    )
+                }
+                is FinishWork -> {
+                    startRestCountDown(
+                        state.value.startRest(startTime = timestampProvider.getTimeMillis())
+                            .getOrThrow()
+                    )
+                }
+                is FinishSet -> {
+                    state.value = state.value.finishRest().getOrThrow()
+                }
+                // TODO: Skip set
+                is RateSet -> {
+                    state.value.let {
+                        if (it !is WorkoutState.SetFinished) {
+                            // TODO: error
+                            return
+                        }
+
+                        launch {
+                            // TODO: directly store result
+                            sideEffect.emit(WorkoutSideEffect.SetRated(
+                                workoutProgress = it.workoutProgress,
+                                rating = action.rating)
+                            )
+                        }
+
+                        state.value = when {
+                            it.workoutProgress.atLastSetOfExercise() -> {
+                                it.finishExercise()
+                            }
+                            else -> {
+                                it.goToNextSet().apply {
+                                    launch {
+                                        sideEffect.emit(WorkoutSideEffect.NewSetActivated(workoutProgress))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                is RateExercise -> {
+                    state.value.let {
+                        if (it !is WorkoutState.ExerciseFinished) {
+                            // TODO: error
+                            return
+                        }
+
+                        launch {
+                            // TODO: directly store result
+                            sideEffect.emit(WorkoutSideEffect.ExerciseRated(
+                                workoutProgress = it.workoutProgress,
+                                rating = action.rating)
+                            )
+                        }
+
+                        if (it.workoutProgress.atLastSetOfWorkout()) {
+                            dispatch(FinishWorkout)
+                            return
+                        }
+                        state.value = it.goToNextExercise()
                     }
                 }
                 is FinishWorkout -> {
+                    state.value = WorkoutState.WorkoutFinished
                     launch {
                         Napier.d("Last exercise finished. Emitting WorkoutFinished effect.")
                         sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
                     }
                 }
-                is StartSet -> {
-                    val currentTractionGoal = state.value.tractionGoal
-                    val currentDurationGoal = state.value.durationGoal
-                    when {
-                        currentTractionGoal == null -> throw WorkoutStoreExceptions.NoTractionGoalAtStartOfSetException
-                        currentDurationGoal == null -> throw WorkoutStoreExceptions.NoDurationGoalAtStartOfSetException
-                        else -> {
-                            // Start the set and count down time
-                            startWorkCountDown(
-                                currentTractionGoal = currentTractionGoal,
-                                currentDurationGoal = currentDurationGoal
-                            )
-                        }
+                is SetDurationGoal -> {
+                    state.value.let {
+                        if (it is WorkoutState.WaitingToStartSet)
+                            state.value = it.setDurationGoal( durationGoal = action.durationGoal)
                     }
                 }
-                is StartRest -> {
-                    startRestCountDown()
-                }
-                is FinishSet -> {
-                    state.value.workoutProgress?.let { workoutProgress ->
-                        // get progress for next set or exercise
-                        dispatch(GoToSet(workoutProgress.forNextStep()))
-
-                        if (workoutProgress.atLastSetOfWorkout()) {
-                            dispatch(FinishWorkout)
-                        }
-                    } ?: throw WorkoutStoreExceptions.WorkoutNotSetException
-                }
-                is SetDurationGoal -> {
-                    if (state.value.working) return
-
-                    state.value = state.value.copy(durationGoal = action.durationGoal)
-                }
                 is SetTractionGoal -> {
-                    if (state.value.working) return
-
-                    state.value = state.value.copy(tractionGoal = action.tractionGoal)
+                    state.value.let {
+                        if (it is WorkoutState.WaitingToStartSet)
+                            state.value = it.setTractionGoal( tractionGoal = action.tractionGoal)
+                    }
                 }
             }
         } catch (exception: Exception) {
@@ -135,41 +176,40 @@ class WorkoutStore(
     }
 
     private fun startWorkCountDown(
-        currentTractionGoal: Long,
-        currentDurationGoal: Long,
+        workingState: WorkoutState.Working
     ) {
-        val (newState, workoutProgress) = state.value.forSetStart(startTime = timestampProvider.getTimeMillis())
-        state.value = newState
+        state.value = workingState
         val workTimeCountdown = launch {
-            while (state.value.timeToWork > 0) {
+            var timeLeft = workingState.timeLeft
+            while (timeLeft > 0) {
                 delay(TICKS)
-                val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                val timeToWork = currentDurationGoal - timeDone
-                state.value = state.value.copy(timeToWork = if(timeToWork > 0) timeToWork else 0)
+                val timePassedSinceSetStart = timestampProvider.getTimeMillis() - workingState.startTime
+                val progressedWorkingState = workingState.workedFor(milliSeconds = timePassedSinceSetStart)
+                state.value = progressedWorkingState
+                timeLeft = progressedWorkingState.timeLeft
             }
         }
         workTimeCountdown.invokeOnCompletion {
             launch {
                 sideEffect.emit(WorkoutSideEffect.WorkFinished(
-                    workoutProgress = workoutProgress,
-                    tractionGoal = currentTractionGoal,
+                    workoutProgress = workingState.workoutProgress,
+                    tractionGoal = workingState.tractionGoal,
                 ))
             }
-            state.value = state.value.copy(working = false)
-            dispatch(StartRest)
+            dispatch(FinishWork)
         }
     }
 
-    private fun startRestCountDown() {
-        val (newState, workoutProgress) = state.value.forRest(timestampProvider.getTimeMillis())
-        state.value = newState
+    private fun startRestCountDown(restingState: WorkoutState.Resting) {
+        state.value = restingState
         val restTimeCounter = launch {
-            val restDuration = workoutProgress.activeSet().restTime*1000L
-            while (state.value.timeToRest > 0) {
+            var timeToRest = restingState.timeLeft
+            while (timeToRest > 0) {
                 delay(TICKS)
-                val timeDone = timestampProvider.getTimeMillis() - state.value.startTime
-                val timeToRest = restDuration - timeDone
-                state.value = state.value.copy(timeToRest = if(timeToRest > 0) timeToRest else 0)
+                val timePassedSinceRestStart = timestampProvider.getTimeMillis() - restingState.startTime
+                val progressedState = restingState.restedFor(milliSeconds = timePassedSinceRestStart)
+                state.value = progressedState
+                timeToRest = progressedState.timeLeft
             }
         }
         restTimeCounter.invokeOnCompletion {

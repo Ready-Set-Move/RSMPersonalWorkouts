@@ -81,6 +81,7 @@ class App : Application() {
             )
         }
         single {
+//            FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
             AppStore(
                 workoutRepository = get(),
                 workoutResultsRepository = get(),
