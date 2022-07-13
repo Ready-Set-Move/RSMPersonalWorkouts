@@ -61,6 +61,19 @@ class AppStore(
     private var workoutState: WorkoutState? = null
 
     init {
+//        launch {
+//            workoutRepository.saveWorkout(
+//                userId = "npt9ZyOesMaYEIaZjGJly8w7C773",
+//                workout = WorkoutBuilder.workout {
+//                exercise("Front Press", position = "19") {
+//                    set(Set(30, duration = 3, restTime = 3), repeat = 2)
+//                }
+//                exercise("Ex 2", position = "Some position description") {
+//                    set(Set(100, duration = 3, restTime = 3), repeat = 1)
+//                }
+//                }
+//            )
+//        }
         launch {
             workoutStore.observeState().collect {
                 workoutState = it
@@ -83,6 +96,7 @@ class AppStore(
         launch {
             Napier.d("Starting side effect to fetch workout for user id: ${user.id}", tag = tag)
             // TODO: error handling: reset userId and throw error
+//            val workout = workoutRepository.fetchLatestWorkoutForUser("6QpQhtAwRZVd7CsIQeakb2i3V9k1")
             val workout = workoutRepository.fetchLatestWorkoutForUser(user.id)
             // still the same user set?
             if (state.value.user == user) {
