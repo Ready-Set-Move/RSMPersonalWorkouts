@@ -35,18 +35,14 @@ fun WorkoutScreen(
                 ) {
                 workoutStore.dispatch(WorkoutAction.StartExercise)
             }
-            is WorkoutState.WaitingToStartSet ->
-                WorkingScreen(
-                    tractionGoal = (state.tractionGoal/1000).toInt(),
-                    timeToWork = state.timeLeft,
-                    currentLoad = deviceState.value.traction,
-                )
-            is WorkoutState.Working ->
-                WorkingScreen(
-                    tractionGoal = (state.tractionGoal/1000).toInt(),
-                    timeToWork = state.timeLeft,
-                    currentLoad = deviceState.value.traction,
-                )
+            is WorkoutState.WaitingToStartSet, is WorkoutState.Working ->
+                (state as IsExercisingState).apply {
+                    WorkingScreen(
+                        tractionGoal = (state.tractionGoal/1000).toInt(),
+                        timeToWork = state.timeLeft,
+                        currentLoad = deviceState.value.traction,
+                    )
+                }
             // TODO: merge resting with showing results and rating
             is WorkoutState.Resting ->
                 RestingScreen(timeToRest = state.timeLeft)
