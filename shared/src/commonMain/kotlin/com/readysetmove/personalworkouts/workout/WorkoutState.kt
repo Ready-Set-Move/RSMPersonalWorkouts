@@ -2,7 +2,14 @@ package com.readysetmove.personalworkouts.workout
 
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.workout.WorkoutState.*
-import com.readysetmove.personalworkouts.workout.WorkoutStateExceptions.*
+
+sealed class WorkoutStateExceptions : Exception() {
+    object WorkoutNotSetException: WorkoutStateExceptions()
+    object StartingExerciseFromWrongStateException: WorkoutStateExceptions()
+    object StartingSetFromWrongStateException: WorkoutStateExceptions()
+    object StartingRestFromWrongStateException: WorkoutStateExceptions()
+    object FinishingSetFromNoExercisingState: WorkoutStateExceptions()
+}
 
 interface IsExercisingState {
     val workoutProgress: WorkoutProgress
@@ -40,15 +47,19 @@ sealed class WorkoutState : State {
     data class ExerciseFinished(
         val workoutProgress: WorkoutProgress,
     ) : WorkoutState()
-    object WorkoutFinished : WorkoutState()
+    data class WorkoutFinished(val workout: Workout) : WorkoutState()
 }
 
-sealed class WorkoutStateExceptions : Exception() {
-    object WorkoutNotSetException: WorkoutStateExceptions()
-    object StartingExerciseFromWrongStateException: WorkoutStateExceptions()
-    object StartingSetFromWrongStateException: WorkoutStateExceptions()
-    object StartingRestFromWrongStateException: WorkoutStateExceptions()
-    object FinishingSetFromNoExercisingState: WorkoutStateExceptions()
+fun NoWorkout.startWorkout(workout: Workout): WaitingToStartExercise  {
+    return WaitingToStartExercise(
+        workoutProgress = WorkoutProgress(
+            workout = workout,
+        ),
+    )
+}
+
+fun WaitingToStartExercise.startExercise(): WaitingToStartSet {
+    return workoutProgress.toWaitingToStartSet()
 }
 
 fun WaitingToStartSet.setDurationGoal(durationGoal: Long): WaitingToStartSet {
@@ -63,26 +74,12 @@ fun WaitingToStartSet.setTractionGoal(tractionGoal: Long): WaitingToStartSet {
     )
 }
 
-fun WorkoutState.startWorkout(workout: Workout): Result<WaitingToStartExercise>  {
-    if (this !is NoWorkout) return Result.failure(WorkoutNotSetException)
-
-    return Result.success(WaitingToStartExercise(
-        workoutProgress = WorkoutProgress(
-            workout = workout,
-        ),
-    ))
-}
-
-fun WorkoutState.startSet(startTime: Long): Result<Working> {
-    if (this !is WaitingToStartSet) return Result.failure(StartingSetFromWrongStateException)
-
-    return Result.success(
-        Working(
+fun WaitingToStartSet.startSet(startTime: Long): Working {
+    return Working(
             startTime = startTime,
             exercisingState = exercisingState,
             durationGoal = durationGoal,
         )
-    )
 }
 
 fun Working.workedFor(milliSeconds: Long): Working {
@@ -94,15 +91,13 @@ fun Working.workedFor(milliSeconds: Long): Working {
     )
 }
 
-fun WorkoutState.startRest(startTime: Long): Result<Resting> {
-    if (this !is Working) return Result.failure(StartingRestFromWrongStateException)
-
-    return Result.success(Resting(
+fun Working.startRest(startTime: Long): Resting {
+    return Resting(
         startTime = startTime,
         exercisingState = exercisingState.copy(
             timeLeft = workoutProgress.activeSet().restTime*1000L,
         ),
-    ))
+    )
 }
 
 fun Resting.restedFor(milliSeconds: Long): Resting {
@@ -114,10 +109,8 @@ fun Resting.restedFor(milliSeconds: Long): Resting {
     )
 }
 
-fun WorkoutState.finishRest(): Result<SetFinished> {
-    if (this !is IsExercisingState) return Result.failure(FinishingSetFromNoExercisingState)
-
-    return Result.success(SetFinished(workoutProgress = workoutProgress))
+fun Resting.finishRest(): SetFinished {
+    return SetFinished(workoutProgress = workoutProgress)
 }
 
 fun SetFinished.goToNextSet(): WaitingToStartSet {
@@ -132,10 +125,8 @@ fun ExerciseFinished.goToNextExercise(): WaitingToStartExercise {
     return WaitingToStartExercise(workoutProgress = workoutProgress.forNextExercise())
 }
 
-fun WorkoutState.startExercise(): Result<WaitingToStartSet> {
-    if (this !is WaitingToStartExercise) return Result.failure(StartingExerciseFromWrongStateException)
-
-    return Result.success(workoutProgress.toWaitingToStartSet())
+fun ExerciseFinished.finishWorkout(): WorkoutFinished {
+    return WorkoutFinished(workout = workoutProgress.workout)
 }
 
 private fun WorkoutProgress.toWaitingToStartSet(): WaitingToStartSet {

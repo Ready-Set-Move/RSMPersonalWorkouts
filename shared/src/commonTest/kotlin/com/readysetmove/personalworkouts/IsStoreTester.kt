@@ -14,7 +14,7 @@ interface IsStoreTester<StateType: State, ActionType: Action, EffectType: Effect
 
     fun dispatch(actionFun: () -> ActionType)
 
-    fun expect(stateFun: () -> StateType): StateType
+    fun <IncomingState: StateType>expect(stateFun: () -> IncomingState): IncomingState
 
     fun verifyMock(verifyFun: () -> Unit)
 

@@ -38,6 +38,10 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
                         }
                     }
                 }
+
+                override suspend fun saveWorkout(userId: String, workout: Workout) {
+                    TODO("Not yet implemented")
+                }
             },
             workoutResultsRepository = WorkoutResultsRepository(),
         )

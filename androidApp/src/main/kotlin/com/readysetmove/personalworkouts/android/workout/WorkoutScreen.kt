@@ -33,7 +33,7 @@ fun WorkoutScreen(
                     exercise = state.workoutProgress.activeExercise(),
                     onNavigateBack = onNavigateBack
                 ) {
-                workoutStore.dispatch(WorkoutAction.StartExercise)
+                workoutStore.dispatch(state.startExerciseAction())
             }
             is WorkoutState.WaitingToStartSet, is WorkoutState.Working ->
                 (state as IsExercisingState).apply {
@@ -53,11 +53,11 @@ fun WorkoutScreen(
                     latestTractions = appState.value.latestSetResult?.tractions,
                     setIndex = state.workoutProgress.activeSetIndex,
                 ) {
-                    workoutStore.dispatch(WorkoutAction.RateSet(1))
+                    workoutStore.dispatch(state.rateSetAction(rating = 1))
                 }
             is WorkoutState.ExerciseFinished ->
                 ExerciseResultsScreen(exercise = state.workoutProgress.activeExercise()) {
-                    workoutStore.dispatch(WorkoutAction.RateExercise(1))
+                    workoutStore.dispatch(state.rateExerciseAction(rating = 1))
                 }
             is WorkoutState.WorkoutFinished ->
                 WorkoutFinishedScreen()

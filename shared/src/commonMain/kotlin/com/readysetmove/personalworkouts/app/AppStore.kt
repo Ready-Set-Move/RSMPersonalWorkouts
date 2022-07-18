@@ -128,7 +128,8 @@ class AppStore(
             }
             is AppAction.StartWorkout -> {
                 state.value.workout?.let { workout ->
-                    workoutStore.dispatch(WorkoutAction.StartWorkout(workout))
+                    // TODO: this needs to be triggered via Workout store only
+                    workoutStore.dispatch(WorkoutState.NoWorkout.startWorkoutAction(workout))
                 } ?: launch {
                         sideEffect.emit(AppSideEffect.NoWorkoutSet)
                 }
@@ -163,7 +164,10 @@ class AppStore(
                 // TODO: what if we don't hit the minimal goal?
                 deviceState.traction*1000 >= tractionGoalThreshold
             }
-            workoutStore.dispatch(WorkoutAction.StartSet)
+            // TODO: this should be handled better in tracking store
+            (workoutState as? WorkoutState.WaitingToStartSet)?.let {
+                workoutStore.dispatch(it.startSetAction())
+            }
         }
     }
     private fun startTracking() {
@@ -207,7 +211,8 @@ fun AppState.updateWithResults(
         tractionGoal = tractionGoal,
         tractions = tractions.map {
             it.copy(timestamp = it.timestamp - setStart)
-        }
+        },
+        rating = 1,
     )
 
     val workoutResults = workoutResults.copyWithAddedResults(

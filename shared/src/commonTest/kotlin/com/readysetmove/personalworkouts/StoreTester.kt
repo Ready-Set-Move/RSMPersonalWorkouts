@@ -32,7 +32,7 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
         actions.add(actionFun())
     }
 
-    override fun expect(stateFun: () -> StateType): StateType {
+    override fun <IncomingState: StateType>expect(stateFun: () -> IncomingState): IncomingState {
         val state = stateFun()
         expects.add(state)
         return state
