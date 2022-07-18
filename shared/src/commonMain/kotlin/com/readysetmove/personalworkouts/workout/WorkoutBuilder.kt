@@ -20,7 +20,7 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
             Set(tractionGoal = med, duration = 10, restTime = 15),
             Set(tractionGoal = max, duration = 5),
         ))
-        set(Set(max), repeat = 4)
+        set(Set(max), repeat = 3)
     }
 
     fun set(set: Set, repeat: Int = 1) {

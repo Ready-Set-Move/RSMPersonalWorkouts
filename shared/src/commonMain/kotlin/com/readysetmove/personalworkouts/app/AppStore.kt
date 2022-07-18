@@ -63,14 +63,20 @@ class AppStore(
     init {
 //        launch {
 //            workoutRepository.saveWorkout(
-//                userId = "npt9ZyOesMaYEIaZjGJly8w7C773",
+//                userId = "CoHbkbOvIUYg4y2NSheGQFtiV2P2",
 //                workout = WorkoutBuilder.workout {
-//                exercise("Front Press", position = "19") {
-//                    set(Set(30, duration = 3, restTime = 3), repeat = 2)
-//                }
-//                exercise("Ex 2", position = "Some position description") {
-//                    set(Set(100, duration = 3, restTime = 3), repeat = 1)
-//                }
+//                    exercise("Overhead Press", position = "?") {
+//                        assessmentTest(5, 10, 15)
+//                    }
+//                    exercise("Squat", position = "@home: 5 | @studio: holds direct") {
+//                        assessmentTest(45, 60, 95)
+//                    }
+//                    exercise("Shrugs", position = "@home: 6 | @studio: holds direct or 0") {
+//                        assessmentTest(40, 60, 85)
+//                    }
+//                    exercise("Drag Curls", position = "?") {
+//                        assessmentTest(5, 10, 15)
+//                    }
 //                }
 //            )
 //        }
