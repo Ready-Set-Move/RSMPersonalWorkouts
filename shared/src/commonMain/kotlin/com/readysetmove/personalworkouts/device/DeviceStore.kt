@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
+// TODO: remove tracking but add management of different devices
 class DeviceStore(
     private val bluetoothStore: BluetoothStore,
     private val mainDispatcher: CoroutineContext,

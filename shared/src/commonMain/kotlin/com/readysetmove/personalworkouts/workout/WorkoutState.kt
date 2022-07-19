@@ -3,23 +3,17 @@ package com.readysetmove.personalworkouts.workout
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.workout.WorkoutState.*
 
-sealed class WorkoutStateExceptions : Exception() {
-    object WorkoutNotSetException: WorkoutStateExceptions()
-    object StartingExerciseFromWrongStateException: WorkoutStateExceptions()
-    object StartingSetFromWrongStateException: WorkoutStateExceptions()
-    object StartingRestFromWrongStateException: WorkoutStateExceptions()
-    object FinishingSetFromNoExercisingState: WorkoutStateExceptions()
-}
-
 interface IsExercisingState {
     val workoutProgress: WorkoutProgress
     val tractionGoal: Long
     val timeLeft: Long
+    val durationGoal: Long
 }
 
 data class ExercisingState(
     override val workoutProgress: WorkoutProgress,
     override val tractionGoal: Long,
+    override val durationGoal: Long,
     override val timeLeft: Long,
 ): IsExercisingState
 
@@ -29,12 +23,10 @@ sealed class WorkoutState : State {
         val workoutProgress: WorkoutProgress,
     ) : WorkoutState()
     data class WaitingToStartSet(
-        val durationGoal: Long,
         val exercisingState: ExercisingState,
     ): WorkoutState(), IsExercisingState by exercisingState
     data class Working(
         val startTime: Long,
-        val durationGoal: Long,
         val exercisingState: ExercisingState,
     ) : WorkoutState(), IsExercisingState by exercisingState
     data class Resting(
@@ -42,14 +34,15 @@ sealed class WorkoutState : State {
         val exercisingState: ExercisingState,
     ) : WorkoutState(), IsExercisingState by exercisingState
     data class SetFinished(
-        val workoutProgress: WorkoutProgress,
-    ) : WorkoutState()
+        val exercisingState: ExercisingState,
+    ) : WorkoutState(), IsExercisingState by exercisingState
     data class ExerciseFinished(
         val workoutProgress: WorkoutProgress,
     ) : WorkoutState()
     data class WorkoutFinished(val workout: Workout) : WorkoutState()
 }
 
+// TODO: correct usage later on when starting workout from screen
 fun NoWorkout.startWorkout(workout: Workout): WaitingToStartExercise  {
     return WaitingToStartExercise(
         workoutProgress = WorkoutProgress(
@@ -64,7 +57,7 @@ fun WaitingToStartExercise.startExercise(): WaitingToStartSet {
 
 fun WaitingToStartSet.setDurationGoal(durationGoal: Long): WaitingToStartSet {
     return copy(
-        durationGoal = durationGoal
+        exercisingState = exercisingState.copy(durationGoal = durationGoal)
     )
 }
 
@@ -78,7 +71,6 @@ fun WaitingToStartSet.startSet(startTime: Long): Working {
     return Working(
             startTime = startTime,
             exercisingState = exercisingState,
-            durationGoal = durationGoal,
         )
 }
 
@@ -110,7 +102,9 @@ fun Resting.restedFor(milliSeconds: Long): Resting {
 }
 
 fun Resting.finishRest(): SetFinished {
-    return SetFinished(workoutProgress = workoutProgress)
+    return SetFinished(exercisingState = exercisingState.copy(
+        timeLeft = 0
+    ))
 }
 
 fun SetFinished.goToNextSet(): WaitingToStartSet {
@@ -137,7 +131,7 @@ private fun WorkoutProgress.toWaitingToStartSet(): WaitingToStartSet {
             workoutProgress = this,
             timeLeft = durationInMs,
             tractionGoal = currentSet.tractionGoal*1000L,
+            durationGoal = durationInMs,
         ),
-        durationGoal = durationInMs,
     )
 }

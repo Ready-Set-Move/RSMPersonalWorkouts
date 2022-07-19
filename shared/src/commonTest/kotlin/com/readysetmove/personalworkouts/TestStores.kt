@@ -9,7 +9,9 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.*
 import com.readysetmove.personalworkouts.workout.*
-import com.readysetmove.personalworkouts.workout.results.WorkoutResultsRepository
+import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
+import com.readysetmove.personalworkouts.workout.results.WorkoutResults
+import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -22,13 +24,9 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     : CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
 
     fun useAppStore(
-        deviceStore: IsDeviceStore = MockDeviceStore(mainDispatcher = this.coroutineContext),
-        workoutStore: WorkoutStore,
         init: StoreTester<AppState, AppAction, AppSideEffect>.() -> Unit,
     ) {
         val appStore = AppStore(
-            workoutStore = workoutStore,
-            deviceStore = deviceStore,
             mainDispatcher = this.coroutineContext,
             workoutRepository = object: IsWorkoutRepository {
                 override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
@@ -43,7 +41,6 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
                     TODO("Not yet implemented")
                 }
             },
-            workoutResultsRepository = WorkoutResultsRepository(),
         )
         val storeTester = StoreTester(
             store = appStore,
@@ -77,7 +74,23 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     ) {
         val workoutStore = WorkoutStore(
             mainDispatcher = this.coroutineContext,
-            timestampProvider = timestampProvider
+            timestampProvider = timestampProvider,
+            workoutResultsStore = WorkoutResultsStore(
+                workoutResultsRepository = object: IsWorkoutResultsRepository {
+                    override suspend fun storeResults(workoutResults: WorkoutResults) {
+                        TODO("Not yet implemented")
+                    }
+
+                    override suspend fun rateExercise(
+                        comment: String,
+                        rating: Int,
+                        exercise: String,
+                    ) {
+                        TODO("Not yet implemented")
+                    }
+                },
+                mainDispatcher = testScheduler,
+            ),
         )
         val storeTester = StoreTester(
             store = workoutStore,

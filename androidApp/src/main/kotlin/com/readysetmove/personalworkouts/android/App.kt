@@ -16,6 +16,8 @@ import com.readysetmove.personalworkouts.workout.WorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutStore
 import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsRepository
+import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
+import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingStore
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.Dispatchers
@@ -75,8 +77,24 @@ class App : Application() {
             }
         }
         single {
+            WorkoutResultsStore(
+                workoutResultsRepository = get(),
+                mainDispatcher = Dispatchers.Main,
+            )
+        }
+        single {
             WorkoutStore(
                 timestampProvider = get(),
+                mainDispatcher = Dispatchers.Main,
+                workoutResultsStore = get(),
+            )
+        }
+        single {
+            TractionTrackingStore(
+                deviceStore = get(),
+                timestampProvider = get(),
+                workoutResultsStore = get(),
+                workoutStore = get(),
                 mainDispatcher = Dispatchers.Main,
             )
         }
@@ -84,9 +102,6 @@ class App : Application() {
 //            FirebaseAuth.getInstance().useEmulator("10.0.2.2", 9099)
             AppStore(
                 workoutRepository = get(),
-                workoutResultsRepository = get(),
-                workoutStore = get(),
-                deviceStore = get(),
                 mainDispatcher = Dispatchers.Main,
                 initialState = AppState(
                     user = FirebaseAuth.getInstance().currentUser.toUser()

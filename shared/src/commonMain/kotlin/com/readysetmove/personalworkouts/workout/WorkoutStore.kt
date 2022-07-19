@@ -4,6 +4,7 @@ import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.WorkoutAction.*
+import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -27,9 +28,7 @@ sealed class WorkoutSideEffect : Effect {
     data class Error(val error: Exception) : WorkoutSideEffect()
     object NewWorkoutStarted : WorkoutSideEffect()
     data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutSideEffect()
-    data class SetRated(val workoutProgress: WorkoutProgress, val rating: Int) : WorkoutSideEffect()
-    data class ExerciseRated(val workoutProgress: WorkoutProgress, val rating: Int) : WorkoutSideEffect()
-    data class NewSetActivated(val workoutProgress: WorkoutProgress) : WorkoutSideEffect()
+    data class NewSetActivated(val tractionGoal: Long) : WorkoutSideEffect()
     object WorkoutFinished : WorkoutSideEffect()
 }
 
@@ -38,7 +37,7 @@ sealed class WorkoutSideEffect : Effect {
 class WorkoutStore(
     initialState: WorkoutState = WorkoutState.NoWorkout,
     mainDispatcher: CoroutineContext,
-//    private val workoutResultsStore: WorkoutResultsStore,
+    private val workoutResultsStore: WorkoutResultsStore,
     private val timestampProvider: IsTimestampProvider,
 ):
     Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
@@ -60,9 +59,12 @@ class WorkoutStore(
                     }
                 }
                 is StartExercise -> {
-                    state.value = action.exerciseStarted.apply {
+                    dispatch(action.transitionToWaitingToStartSet)
+                }
+                is TransitionToWaitingToStartSet -> {
+                    state.value = action.waitingToStartSet.apply {
                         launch {
-                            sideEffect.emit(WorkoutSideEffect.NewSetActivated(workoutProgress))
+                            sideEffect.emit(WorkoutSideEffect.NewSetActivated(tractionGoal = tractionGoal))
                         }
                     }
                 }
@@ -85,38 +87,33 @@ class WorkoutStore(
                 }
                 // TODO: Skip set
                 is RateSet -> {
-                    state.value = action.setFinished.let { setFinishedState ->
-                        launch {
-                            // TODO: directly store result
-                            sideEffect.emit(WorkoutSideEffect.SetRated(
-                                workoutProgress = setFinishedState.workoutProgress,
-                                rating = action.rating)
-                            )
-                        }
+                    action.setFinished.let { setFinishedState ->
+                        workoutResultsStore.rateSet(
+                            tractionGoal = setFinishedState.tractionGoal,
+                            durationGoal = setFinishedState.durationGoal,
+                            workoutProgress = setFinishedState.workoutProgress,
+                            rating = action.rating,
+                        )
 
                         when {
                             setFinishedState.workoutProgress.atLastSetOfExercise() -> {
-                                setFinishedState.finishExercise()
+                                state.value = setFinishedState.finishExercise()
                             }
                             else -> {
-                                setFinishedState.goToNextSet().apply {
-                                    launch {
-                                        sideEffect.emit(WorkoutSideEffect.NewSetActivated(workoutProgress))
-                                    }
-                                }
+                                dispatch(TransitionToWaitingToStartSet(
+                                    waitingToStartSet = setFinishedState.goToNextSet()
+                                ))
                             }
                         }
                     }
                 }
                 is RateExercise -> {
                     state.value = action.exerciseFinished.let { exerciseFinishedState ->
-                        launch {
-                            // TODO: directly store result
-                            sideEffect.emit(WorkoutSideEffect.ExerciseRated(
-                                workoutProgress = exerciseFinishedState.workoutProgress,
-                                rating = action.rating)
-                            )
-                        }
+                        workoutResultsStore.rateExercise(
+                            comment = action.comment,
+                            rating = action.rating,
+                            exercise = exerciseFinishedState.workoutProgress.activeExercise(),
+                        )
 
                         when {
                             exerciseFinishedState.workoutProgress.atLastSetOfWorkout() -> {

@@ -1,51 +1,37 @@
 package com.readysetmove.personalworkouts.app
 
-import com.readysetmove.personalworkouts.device.DeviceAction
-import com.readysetmove.personalworkouts.device.IsDeviceStore
-import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
-import com.readysetmove.personalworkouts.workout.*
-import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
-import com.readysetmove.personalworkouts.workout.results.SetResult
-import com.readysetmove.personalworkouts.workout.results.WorkoutResults
-import com.readysetmove.personalworkouts.workout.results.copyWithAddedResults
+import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
+import com.readysetmove.personalworkouts.workout.Workout
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 data class AppState(
     val user: User? = null,
     val workout: Workout? = null,
-    val workoutResults: WorkoutResults? = null,
-    val isWaitingToHitTractionGoal: Boolean = false,
-    val latestSetResult: SetResult? = null,
 ) : State
 
 sealed class AppAction: Action {
     data class SetUser(val user: User): AppAction()
     object UnsetUser: AppAction()
-    object StartWorkout: AppAction()
-    object StartNextSet: AppAction()
 }
 
-sealed class AppSideEffect : Effect {
-    object NoWorkoutSet : AppSideEffect()
-    object NoSetInProgress : AppSideEffect()
-}
+sealed class AppSideEffect : Effect
 
 // TODO: implement SettingsStore
 // TODO: implement UserStore to handle Firebase logic
 class AppStore(
     initialState: AppState = AppState(),
     private val workoutRepository: IsWorkoutRepository,
-    private val workoutResultsRepository: IsWorkoutResultsRepository,
-    private val deviceStore: IsDeviceStore,
-    private val workoutStore: WorkoutStore,
     private val mainDispatcher: CoroutineContext,
 ):
     Store<AppState, AppAction, AppSideEffect>,
@@ -57,8 +43,6 @@ class AppStore(
     override fun observeSideEffect(): Flow<AppSideEffect> = sideEffect
 
     private val tag = "AppStore"
-
-    private var workoutState: WorkoutState? = null
 
     init {
 //        launch {
@@ -80,21 +64,8 @@ class AppStore(
 //                }
 //            )
 //        }
-        launch {
-            workoutStore.observeState().collect {
-                workoutState = it
-            }
-        }
         state.value.user?.let {
             fetchWorkoutForUser(it)
-        }
-        // TODO: reverse flow to call this directly
-        launch {
-            workoutStore.observeSideEffect()
-                .filterIsInstance<WorkoutSideEffect.NewSetActivated>()
-                .collect {
-                    dispatch(AppAction.StartNextSet)
-                }
         }
     }
 
@@ -126,106 +97,6 @@ class AppStore(
                 fetchWorkoutForUser(action.user)
                 state.value = AppState(user = action.user)
             }
-            is AppAction.StartWorkout -> {
-                state.value.workout?.let { workout ->
-                    // TODO: this needs to be triggered via Workout store only
-                    workoutStore.dispatch(WorkoutState.NoWorkout.startWorkoutAction(workout))
-                } ?: launch {
-                        sideEffect.emit(AppSideEffect.NoWorkoutSet)
-                }
-            }
-            is AppAction.StartNextSet -> {
-                workoutState.let {
-                    when(it) {
-                        is WorkoutState.WaitingToStartSet -> {
-                            val currentTractionGoal = it.workoutProgress.activeSet().tractionGoal
-                            listenForSetStart(currentTractionGoal*1000L)
-                            // TODO: pull up tracking! Separate into WorkoutResultsStore?
-                            startTracking()
-                            state.value = state.value.copy(isWaitingToHitTractionGoal = true)
-                        }
-                        else -> launch {
-                            // TODO: this should be different effect
-                            sideEffect.emit(AppSideEffect.NoSetInProgress)
-                        }
-                    }
-                }
-            }
         }
     }
-
-    private fun listenForSetStart(currentTractionGoal: Long) {
-        launch {
-            // handle max sets with 0 weight starting at 5
-            val tractionGoalThreshold = if(currentTractionGoal>0) currentTractionGoal*.8f else 5f
-            // start tracking as soon as we have relevant traction delivered
-            deviceStore.observeState().first { deviceState ->
-                // start countdown and tracking as soon as we hit relevant weight
-                // TODO: what if we don't hit the minimal goal?
-                deviceState.traction*1000 >= tractionGoalThreshold
-            }
-            // TODO: this should be handled better in tracking store
-            (workoutState as? WorkoutState.WaitingToStartSet)?.let {
-                workoutStore.dispatch(it.startSetAction())
-            }
-        }
-    }
-    private fun startTracking() {
-        launch {
-            workoutStore.observeSideEffect()
-                .filterIsInstance<WorkoutSideEffect.WorkFinished>()
-                .first { setFinishedEffect ->
-                    deviceStore.dispatch(DeviceAction.StopTracking)
-                    val stoppedState = deviceStore.observeState().first { deviceState -> !deviceState.trackingActive }
-
-                    state.value = state.value.updateWithResults(
-                        tractions = stoppedState.trackedTraction,
-                        workoutProgress = setFinishedEffect.workoutProgress,
-                        tractionGoal = setFinishedEffect.tractionGoal,
-                    ) {
-                        launch {
-                            workoutResultsRepository.storeResults(it)
-                        }
-                    }
-                    true
-                }
-        }
-        deviceStore.dispatch(DeviceAction.StartTracking)
-    }
-}
-
-fun AppState.updateWithResults(
-    tractions: List<Traction>,
-    tractionGoal: Long,
-    workoutProgress: WorkoutProgress,
-    onResultsUpdated: (WorkoutResults) -> Unit
-): AppState {
-    // only update results if workout is still running
-    if (workout == null) return this
-
-    // TODO: segment tracked data in ramp up < work > ramp down phases
-    //  also calculate min | max | median of workout phase
-    // tractions need timestamps relative to beginning of first traction
-    val setStart = tractions.first().timestamp
-    val setResult = SetResult(
-        tractionGoal = tractionGoal,
-        tractions = tractions.map {
-            it.copy(timestamp = it.timestamp - setStart)
-        },
-        rating = 1,
-    )
-
-    val workoutResults = workoutResults.copyWithAddedResults(
-        setWithResult = workoutProgress.activeSetIndex to setResult,
-        exerciseName = workoutProgress.activeExercise().name,
-        workoutId = workoutProgress.workout.id,
-    )
-
-    onResultsUpdated(workoutResults)
-
-    return copy(
-        workoutResults = workoutResults,
-        isWaitingToHitTractionGoal = false,
-        latestSetResult = setResult,
-    )
 }

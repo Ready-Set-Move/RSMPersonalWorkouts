@@ -48,8 +48,9 @@ class WorkoutStoreTest {
                 workoutProgress = workoutProgress,
                 timeLeft = setDuration,
                 tractionGoal = tractionGoal,
+                durationGoal = setDuration,
             )
-            expect { WorkoutState.WaitingToStartSet(exercisingState = workingState, durationGoal = setDuration) }
+            expect { WorkoutState.WaitingToStartSet(exercisingState = workingState) }
                 .let {
                     dispatch { it.startSetAction() }
                 }
@@ -58,21 +59,18 @@ class WorkoutStoreTest {
             expect {
                 WorkoutState.Working(
                     startTime = 0,
-                    durationGoal = setDuration,
                     exercisingState = workingState.copy(timeLeft = setDuration),
                 )
             }
             expect {
                 WorkoutState.Working(
                     startTime = 0,
-                    durationGoal = setDuration,
                     exercisingState = workingState.copy(timeLeft = 1100),
                 )
             }
             expect {
                 WorkoutState.Working(
                     startTime = 0,
-                    durationGoal = setDuration,
                     exercisingState = workingState.copy(timeLeft = 200),
                 )
             }
@@ -80,7 +78,6 @@ class WorkoutStoreTest {
             expect {
                 WorkoutState.Working(
                     startTime = 0,
-                    durationGoal = setDuration,
                     exercisingState = workingState.copy(timeLeft = 0),
                 )
             }
@@ -92,7 +89,7 @@ class WorkoutStoreTest {
             expect { WorkoutState.Resting(startTime = 2200, exercisingState = restingExercisingState.copy(timeLeft = 200)) }
             expect { WorkoutState.Resting(startTime = 2200, exercisingState = restingExercisingState.copy(timeLeft = 0)) }
             // stop resting and finish set
-            expect { WorkoutState.SetFinished(workoutProgress = workoutProgress) }
+            expect { WorkoutState.SetFinished(exercisingState = restingExercisingState.copy(timeLeft = 0)) }
         }
    }
 
@@ -127,8 +124,9 @@ class WorkoutStoreTest {
                 workoutProgress = workoutStartProgress,
                 timeLeft = ex1Set1Duration,
                 tractionGoal = 10000,
+                durationGoal = ex1Set1Duration,
             )
-            val waitingState = expect { WorkoutState.WaitingToStartSet(exercisingState = workingState, durationGoal = ex1Set1Duration) }
+            val waitingState = expect { WorkoutState.WaitingToStartSet(exercisingState = workingState) }
             // start working
             step("Runs the first set of the first exercise") {
                 timestampProvider.timestamps.add(0)
@@ -137,7 +135,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = 0,
-                        durationGoal = ex1Set1Duration,
                         exercisingState = workingState,
                     )
                 }
@@ -146,7 +143,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = 0,
-                        durationGoal = ex1Set1Duration,
                         exercisingState = workingState.copy(timeLeft = 1000),
                     )
                 }
@@ -155,7 +151,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = 0,
-                        durationGoal = ex1Set1Duration,
                         exercisingState = workingState.copy(timeLeft = 0),
                     )
                 }
@@ -173,7 +168,7 @@ class WorkoutStoreTest {
                 timestampProvider.timestamps.add(26000)
                 expect { WorkoutState.Resting(startTime = restStartingTime, exercisingState = restingExercisingState.copy(timeLeft = 0)) }
                 // stop resting and finish set
-                val finishedState = expect { WorkoutState.SetFinished(workoutProgress = workoutStartProgress) }
+                val finishedState = expect { WorkoutState.SetFinished(exercisingState = restingExercisingState.copy(timeLeft = 0)) }
 
                 step("Proceeds by rating the first set") {
                     dispatch { finishedState.rateSetAction(rating = 1) }
@@ -185,13 +180,13 @@ class WorkoutStoreTest {
                 workingState = ExercisingState(
                     workoutProgress = ex1Set2Progress,
                     tractionGoal = 40000,
+                    durationGoal = ex1Set2Duration,
                     timeLeft = ex1Set2Duration,
                 )
                 val workStartingTime = 30000L
                 timestampProvider.timestamps.add(workStartingTime)
                 expect {
                     WorkoutState.WaitingToStartSet(
-                        durationGoal = ex1Set2Duration,
                         exercisingState = workingState
                     )
                 }.let {
@@ -201,7 +196,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set2Duration,
                         exercisingState = workingState,
                     )
                 }
@@ -210,7 +204,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set2Duration,
                         exercisingState = workingState.copy(timeLeft = 3000),
                     )
                 }
@@ -219,7 +212,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set2Duration,
                         exercisingState = workingState.copy(timeLeft = 0),
                     )
                 }
@@ -247,7 +239,7 @@ class WorkoutStoreTest {
                     )
                 }
                 // stop resting and finish set
-                val finishedState = expect { WorkoutState.SetFinished(workoutProgress = ex1Set2Progress) }
+                val finishedState = expect { WorkoutState.SetFinished(exercisingState = restingExercisingState.copy(timeLeft = 0)) }
 
                 step("Proceeds by rating the second set") {
                     dispatch { finishedState.rateSetAction(rating = 1) }
@@ -259,13 +251,13 @@ class WorkoutStoreTest {
                 workingState = ExercisingState(
                     workoutProgress = ex1Set3Progress,
                     tractionGoal = 40000,
+                    durationGoal = ex1Set3Duration,
                     timeLeft = ex1Set3Duration,
                 )
                 val workStartingTime = 100000L
                 timestampProvider.timestamps.add(workStartingTime)
                 expect {
                     WorkoutState.WaitingToStartSet(
-                        durationGoal = ex1Set3Duration,
                         exercisingState = workingState
                     )
                 }.let {
@@ -276,7 +268,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set3Duration,
                         exercisingState = workingState,
                     )
                 }
@@ -285,7 +276,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set3Duration,
                         exercisingState = workingState.copy(timeLeft = 3000),
                     )
                 }
@@ -294,7 +284,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex1Set3Duration,
                         exercisingState = workingState.copy(timeLeft = 0),
                     )
                 }
@@ -322,13 +311,13 @@ class WorkoutStoreTest {
                     )
                 }
                 // stop resting and finish set
-                val finishedState = expect { WorkoutState.SetFinished(workoutProgress = ex1Set3Progress) }
+                val finishedState = expect { WorkoutState.SetFinished(exercisingState = restingExercisingState.copy(timeLeft = 0)) }
 
                 step("Proceeds by rating the second set and the first exercise") {
                     dispatch { finishedState.rateSetAction(rating = 1) }
                     expect { WorkoutState.ExerciseFinished(workoutProgress = ex1Set3Progress) }
                         .let {
-                            dispatch { it.rateExerciseAction(rating = 1) }
+                            dispatch { it.rateExerciseAction(rating = 1, comment = "") }
                         }
                     waitingToStartExerciseState = expect {
                         WorkoutState.WaitingToStartExercise(workoutProgress = workoutStartProgress.copy(activeExerciseIndex = 1))
@@ -344,13 +333,13 @@ class WorkoutStoreTest {
                 workingState = ExercisingState(
                     workoutProgress = ex2Progress,
                     tractionGoal = 30000,
+                    durationGoal = ex2Duration,
                     timeLeft = ex2Duration,
                 )
                 val workStartingTime = 200000L
                 timestampProvider.timestamps.add(workStartingTime)
                 expect {
                     WorkoutState.WaitingToStartSet(
-                        durationGoal = ex2Duration,
                         exercisingState = workingState
                     )
                 }.let {
@@ -360,7 +349,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex2Duration,
                         exercisingState = workingState,
                     )
                 }
@@ -369,7 +357,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex2Duration,
                         exercisingState = workingState.copy(timeLeft = 5000),
                     )
                 }
@@ -378,7 +365,6 @@ class WorkoutStoreTest {
                 expect {
                     WorkoutState.Working(
                         startTime = workStartingTime,
-                        durationGoal = ex2Duration,
                         exercisingState = workingState.copy(timeLeft = 0),
                     )
                 }
@@ -406,13 +392,13 @@ class WorkoutStoreTest {
                     )
                 }
                 // stop resting and finish set
-                val finishedState = expect { WorkoutState.SetFinished(workoutProgress = ex2Progress) }
+                val finishedState = expect { WorkoutState.SetFinished(exercisingState = restingExercisingState.copy(timeLeft = 0)) }
 
                 step("Finishes the workout by rating the set and the second exercise") {
                     dispatch { finishedState.rateSetAction(rating = 1) }
                     expect { WorkoutState.ExerciseFinished(workoutProgress = ex2Progress) }
                         .let {
-                            dispatch { it.rateExerciseAction(rating = 1) }
+                            dispatch { it.rateExerciseAction(rating = 1, comment = "") }
                         }
                     expect { WorkoutState.WorkoutFinished(workout) }
                 }

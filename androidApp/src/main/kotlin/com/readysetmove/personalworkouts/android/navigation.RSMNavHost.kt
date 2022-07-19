@@ -22,7 +22,6 @@ import com.readysetmove.personalworkouts.android.settings.SettingsScreen
 import com.readysetmove.personalworkouts.android.user.LoginScreen
 import com.readysetmove.personalworkouts.android.workout.WorkoutScreen
 import com.readysetmove.personalworkouts.android.workout.overview.WorkoutOverviewScreen
-import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
@@ -119,7 +118,6 @@ fun RSMNavHost(navController: NavHostController) {
             WorkoutOverviewScreen(
                 userName = appState.value.user?.displayName ?: "Not logged in",
                 workout = appState.value.workout,
-                onStartWorkout = { appStore.dispatch(AppAction.StartWorkout) },
                 onNavigateBack = { navController.navigate(LoginScreen.ROUTE) }
             )
         }

@@ -2,11 +2,11 @@ package com.readysetmove.personalworkouts.workout.results
 
 import com.readysetmove.personalworkouts.device.Traction
 
-data class SetResult(val tractionGoal: Long, val tractions: List<Traction>, val rating: Int)
+data class SetResult(val tractionGoal: Long, val durationGoal: Long, val tractions: List<Traction>, val rating: Int)
 data class ExerciseResult(val setResults: Map<Int, SetResult>, val rating: Int? = null)
 data class WorkoutResults(val workoutId: String, val exercises: Map<String, ExerciseResult>)
 
-fun WorkoutResults?.copyWithAddedResults(setWithResult: Pair<Int, SetResult>, exerciseName: String, workoutId: String): WorkoutResults {
+fun WorkoutResults?.copyWithSetResults(setWithResult: Pair<Int, SetResult>, exerciseName: String, workoutId: String): WorkoutResults {
     // TODO: unit tests
     if (this == null) {
         // no results yet? create everything from scratch for the first result

@@ -6,12 +6,13 @@ import com.readysetmove.personalworkouts.workout.WorkoutState.*
 
 sealed class WorkoutAction: Action {
     data class StartWorkout(val workoutStarted: WaitingToStartExercise): WorkoutAction()
-    data class StartExercise(val exerciseStarted: WaitingToStartSet): WorkoutAction()
+    data class StartExercise(val transitionToWaitingToStartSet: TransitionToWaitingToStartSet): WorkoutAction()
     data class StartSet(val waitingToStartSet: WaitingToStartSet): WorkoutAction()
     data class FinishWork(val working: Working): WorkoutAction()
     data class FinishSet(val resting: Resting): WorkoutAction()
     data class RateSet(val rating: Int, val setFinished: SetFinished): WorkoutAction()
-    data class RateExercise(val rating: Int, val exerciseFinished: ExerciseFinished): WorkoutAction()
+    data class RateExercise(val rating: Int, val comment: String, val exerciseFinished: ExerciseFinished): WorkoutAction()
+    data class TransitionToWaitingToStartSet(val waitingToStartSet: WaitingToStartSet): WorkoutAction()
     data class SetTractionGoal(val waitingToStartSetWithUpdatedTraction: WaitingToStartSet): WorkoutAction()
     data class SetDurationGoal(val waitingToStartSetWithUpdatedDuration: WaitingToStartSet): WorkoutAction()
 }
@@ -21,7 +22,11 @@ fun NoWorkout.startWorkoutAction(workout: Workout): StartWorkout {
 }
 
 fun WaitingToStartExercise.startExerciseAction(): StartExercise {
-    return StartExercise(exerciseStarted = this.startExercise())
+    return StartExercise(
+        transitionToWaitingToStartSet = TransitionToWaitingToStartSet(
+            waitingToStartSet = this.startExercise()
+        )
+    )
 }
 
 fun WaitingToStartSet.setDurationGoalAction(durationGoal: Long): SetDurationGoal {
@@ -51,9 +56,10 @@ fun SetFinished.rateSetAction(rating: Int): RateSet {
     )
 }
 
-fun ExerciseFinished.rateExerciseAction(rating: Int): RateExercise {
+fun ExerciseFinished.rateExerciseAction(rating: Int, comment: String): RateExercise {
     return RateExercise(
         rating = rating,
+        comment = comment,
         exerciseFinished = this,
     )
 }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -17,9 +18,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.workout.*
 import com.readysetmove.personalworkouts.workout.Set
-import com.readysetmove.personalworkouts.workout.Workout
-import com.readysetmove.personalworkouts.workout.WorkoutBuilder
+import org.koin.androidx.compose.get
 
 
 object WorkoutOverviewScreen {
@@ -27,7 +28,8 @@ object WorkoutOverviewScreen {
 }
 
 @Composable
-fun WorkoutOverviewScreen(userName: String, workout: Workout?, onStartWorkout: () -> Unit, onNavigateBack: () -> Unit) {
+fun WorkoutOverviewScreen(userName: String, workout: Workout?, workoutStore: WorkoutStore = get(), onNavigateBack: () -> Unit) {
+    val workoutState = workoutStore.observeState().collectAsState()
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout_overview__screen_title)
     Scaffold(
@@ -44,15 +46,25 @@ fun WorkoutOverviewScreen(userName: String, workout: Workout?, onStartWorkout: (
             )
         },
         floatingActionButton = {
-            val actionText = stringResource(R.string.workout_overview__start_workout)
-            ExtendedFloatingActionButton(
-                icon = {
-                    Icon(imageVector = Icons.Filled.PlayCircle,
-                        contentDescription = actionText)
-                },
-                text = { Text(text = actionText) },
-                onClick = onStartWorkout,
-            )
+            // TODO: split into a splash screen higher up in the tree
+            workout?.let { workout ->
+                workoutState.value.let { currentState ->
+                    // TODO: here we could handle aborting running workout
+                    if (currentState is WorkoutState.NoWorkout) {
+                        val actionText = stringResource(R.string.workout_overview__start_workout)
+                        ExtendedFloatingActionButton(
+                            icon = {
+                                Icon(imageVector = Icons.Filled.PlayCircle,
+                                    contentDescription = actionText)
+                            },
+                            text = { Text(text = actionText) },
+                            onClick = {
+                                workoutStore.dispatch(currentState.startWorkoutAction(workout = workout))
+                            },
+                        )
+                    }
+                }
+            }
         },
     ) { innerPadding ->
         Column(modifier = Modifier
@@ -89,7 +101,6 @@ fun PreviewWorkoutOverviewScreen() {
                     set(Set(65, duration = 12), repeat = 3)
                 }
             },
-            onStartWorkout = {},
             userName = "Bob"
         ) {}
     }
