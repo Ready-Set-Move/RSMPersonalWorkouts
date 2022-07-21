@@ -9,10 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
-import com.readysetmove.personalworkouts.device.Traction
 
 @Composable
-fun DeviceOverviewCard(deviceName: String, currentWeight: Float, trackedTractions: List<Traction>, trackingActive: Boolean, onToggleTracking: () -> Unit, onSetTara: () -> Unit) {
+fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onSetTara: () -> Unit) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
@@ -25,14 +24,6 @@ fun DeviceOverviewCard(deviceName: String, currentWeight: Float, trackedTraction
             Spacer(Modifier.height(AppTheme.spacings.md))
             Button(onClick = onSetTara) {
                 Text(text = "Set tara")
-            }
-            Spacer(Modifier.height(AppTheme.spacings.md))
-            Button(onClick = onToggleTracking) {
-                Text(text = if (trackingActive) "Stop Tracking" else "Start Tracking")
-            }
-            Spacer(Modifier.height(AppTheme.spacings.sm))
-            trackedTractions.map {
-                Text(text = "${it.timestamp} - ${it.value}")
             }
         }
     }
@@ -52,9 +43,6 @@ fun PreviewDeviceOverviewCard() {
             DeviceOverviewCard(
                 "Your Device",
                 1337.0f,
-                emptyList(),
-                false,
-                {}
             ) {}
         }
     }

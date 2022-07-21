@@ -1,14 +1,13 @@
 package com.readysetmove.personalworkouts
 
 import com.readysetmove.personalworkouts.state.Action
-import com.readysetmove.personalworkouts.state.Effect
+import com.readysetmove.personalworkouts.state.SimpleStore
 import com.readysetmove.personalworkouts.state.State
-import com.readysetmove.personalworkouts.state.Store
 
-interface IsStoreTester<StateType: State, ActionType: Action, EffectType: Effect> {
-    val store: Store<StateType, ActionType, EffectType>
+interface IsStoreTester<StateType: State, ActionType: Action> {
+    val store: SimpleStore<StateType, ActionType>
 
-    fun step(stepMessage: String, buildStep: IsStoreTester<StateType, ActionType, EffectType>.() -> Unit)
+    fun step(stepMessage: String, buildStep: IsStoreTester<StateType, ActionType>.() -> Unit)
 
     fun prepare(runPrepare: () -> Unit = {})
 

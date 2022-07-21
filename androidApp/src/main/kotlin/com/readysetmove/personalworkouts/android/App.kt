@@ -13,7 +13,7 @@ import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.device.MockDeviceStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
-import com.readysetmove.personalworkouts.workout.WorkoutStore
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
 import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsRepository
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
@@ -72,7 +72,6 @@ class App : Application() {
                 DeviceStore(
                     bluetoothStore = get(),
                     mainDispatcher = Dispatchers.Main,
-                    timestampProvider = get(),
                 )
             }
         }
@@ -83,19 +82,18 @@ class App : Application() {
             )
         }
         single {
-            WorkoutStore(
+            WorkoutProgressStore(
                 timestampProvider = get(),
                 mainDispatcher = Dispatchers.Main,
-                workoutResultsStore = get(),
             )
         }
-        single {
+        single(createdAtStart = true) {
             TractionTrackingStore(
                 deviceStore = get(),
                 timestampProvider = get(),
                 workoutResultsStore = get(),
-                workoutStore = get(),
                 mainDispatcher = Dispatchers.Main,
+                workoutProgressStore = get(),
             )
         }
         single {

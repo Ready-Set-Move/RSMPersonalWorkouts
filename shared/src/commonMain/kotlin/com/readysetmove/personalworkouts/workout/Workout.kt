@@ -1,5 +1,6 @@
 package com.readysetmove.personalworkouts.workout
 
+import com.readysetmove.personalworkouts.workout.progress.WorkoutExceptions
 import kotlinx.serialization.Serializable
 
 @Serializable

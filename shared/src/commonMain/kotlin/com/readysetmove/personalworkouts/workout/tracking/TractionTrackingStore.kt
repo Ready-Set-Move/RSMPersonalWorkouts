@@ -6,11 +6,11 @@ import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.Store
-import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
-import com.readysetmove.personalworkouts.workout.WorkoutState
-import com.readysetmove.personalworkouts.workout.WorkoutStore
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressSideEffect
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressState
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
+import com.readysetmove.personalworkouts.workout.progress.startSetAction
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
-import com.readysetmove.personalworkouts.workout.startSetAction
 import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingAction.*
 import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingState.*
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +28,7 @@ class TractionTrackingStore(
     private val deviceStore: IsDeviceStore,
     private val timestampProvider: IsTimestampProvider,
     private val workoutResultsStore: WorkoutResultsStore,
-    private val workoutStore: WorkoutStore,
+    private val workoutProgressStore: WorkoutProgressStore,
     mainDispatcher: CoroutineContext
 ):
     Store<TractionTrackingState, TractionTrackingAction, TractionTrackingSideEffect>,
@@ -40,6 +40,13 @@ class TractionTrackingStore(
 
     override fun observeState() = state
     override fun observeSideEffect() = sideEffect
+
+    init {
+        // initial listener on start of set
+        launch {
+            listenToNewSetActivated(TrackingNotStarted)
+        }
+    }
 
     override fun dispatch(action: TractionTrackingAction) {
         when(action) {
@@ -61,9 +68,7 @@ class TractionTrackingStore(
                     )
                 }.apply {
                     invokeOnCompletion {
-                        dispatch(TransitionToTractionsTracked(
-                            tractionsTracked = action.tracking.stopTracking()
-                        ))
+                        dispatch(action.tracking.transitionToTractionsTrackedAction())
                     }
                 }
                 launch {
@@ -101,10 +106,10 @@ class TractionTrackingStore(
             deviceState.reachedTractionGoal(tractionGoal)
         }
         // make sure we land at the correct workout state before continuing
-        val workoutState = workoutStore.observeState()
-            .filterIsInstance<WorkoutState.WaitingToStartSet>()
+        val workoutProgressState = workoutProgressStore.observeState()
+            .filterIsInstance<WorkoutProgressState.WaitingToStartSet>()
             .first()
-        workoutStore.dispatch(workoutState.startSetAction())
+        workoutProgressStore.dispatch(workoutProgressState.startSetAction())
     }
 
     private suspend fun trackTractions(tracking: Tracking, startedAt: Long) {
@@ -116,18 +121,18 @@ class TractionTrackingStore(
         }
     }
 
-    private suspend fun listenToNewSetActivated(tractionsTracked: TractionsTracked) {
-        val newSetActivatedEffect = workoutStore.observeSideEffect()
-            .filterIsInstance<WorkoutSideEffect.NewSetActivated>()
+    private suspend fun listenToNewSetActivated(canPrepareTracking: CanPrepareTracking) {
+        val newSetActivatedEffect = workoutProgressStore.observeSideEffect()
+            .filterIsInstance<WorkoutProgressSideEffect.NewSetActivated>()
             .first()
-        dispatch(tractionsTracked.prepareTrackingAction(
+        dispatch(canPrepareTracking.prepareTrackingAction(
             tractionGoal = newSetActivatedEffect.tractionGoal
         ))
     }
 
     private suspend fun listenToWorkFinished(tracking: Tracking) {
-        workoutStore.observeSideEffect()
-            .filterIsInstance<WorkoutSideEffect.WorkFinished>()
+        workoutProgressStore.observeSideEffect()
+            .filterIsInstance<WorkoutProgressSideEffect.WorkFinished>()
             .first()
         dispatch(tracking.stopTrackingAction())
     }

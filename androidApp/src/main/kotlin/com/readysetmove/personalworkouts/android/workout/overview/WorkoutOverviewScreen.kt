@@ -20,6 +20,9 @@ import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.workout.*
 import com.readysetmove.personalworkouts.workout.Set
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressState
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
+import com.readysetmove.personalworkouts.workout.progress.startWorkoutAction
 import org.koin.androidx.compose.get
 
 
@@ -28,8 +31,8 @@ object WorkoutOverviewScreen {
 }
 
 @Composable
-fun WorkoutOverviewScreen(userName: String, workout: Workout?, workoutStore: WorkoutStore = get(), onNavigateBack: () -> Unit) {
-    val workoutState = workoutStore.observeState().collectAsState()
+fun WorkoutOverviewScreen(userName: String, workout: Workout?, workoutProgressStore: WorkoutProgressStore = get(), onNavigateBack: () -> Unit) {
+    val workoutState = workoutProgressStore.observeState().collectAsState()
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.workout_overview__screen_title)
     Scaffold(
@@ -50,7 +53,7 @@ fun WorkoutOverviewScreen(userName: String, workout: Workout?, workoutStore: Wor
             workout?.let { workout ->
                 workoutState.value.let { currentState ->
                     // TODO: here we could handle aborting running workout
-                    if (currentState is WorkoutState.NoWorkout) {
+                    if (currentState is WorkoutProgressState.NoWorkout) {
                         val actionText = stringResource(R.string.workout_overview__start_workout)
                         ExtendedFloatingActionButton(
                             icon = {
@@ -59,7 +62,7 @@ fun WorkoutOverviewScreen(userName: String, workout: Workout?, workoutStore: Wor
                             },
                             text = { Text(text = actionText) },
                             onClick = {
-                                workoutStore.dispatch(currentState.startWorkoutAction(workout = workout))
+                                workoutProgressStore.dispatch(currentState.startWorkoutAction(workout = workout))
                             },
                         )
                     }

@@ -1,17 +1,21 @@
 package com.readysetmove.personalworkouts
 
 import com.readysetmove.personalworkouts.app.AppAction
-import com.readysetmove.personalworkouts.app.AppSideEffect
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.*
-import com.readysetmove.personalworkouts.workout.*
-import com.readysetmove.personalworkouts.workout.results.IsWorkoutResultsRepository
-import com.readysetmove.personalworkouts.workout.results.WorkoutResults
-import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
+import com.readysetmove.personalworkouts.device.DeviceAction
+import com.readysetmove.personalworkouts.device.DeviceState
+import com.readysetmove.personalworkouts.device.DeviceStore
+import com.readysetmove.personalworkouts.device.IsDeviceStore
+import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
+import com.readysetmove.personalworkouts.workout.Workout
+import com.readysetmove.personalworkouts.workout.WorkoutBuilder
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressAction
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressState
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +28,7 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
     : CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
 
     fun useAppStore(
-        init: StoreTester<AppState, AppAction, AppSideEffect>.() -> Unit,
+        init: StoreTester<AppState, AppAction>.() -> Unit,
     ) {
         val appStore = AppStore(
             mainDispatcher = this.coroutineContext,
@@ -50,15 +54,16 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
         storeTester.run()
     }
 
+    // TODO: WorkoutResultsStore
+
     fun useDeviceStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
         bluetoothStore: BluetoothStore,
-        init: StoreTester<DeviceState, DeviceAction, DeviceSideEffect>.(deviceStore: IsDeviceStore) -> Unit,
+        init: StoreTester<DeviceState, DeviceAction>.(deviceStore: IsDeviceStore) -> Unit,
     ) {
         val deviceStore = DeviceStore(
             mainDispatcher = this.coroutineContext,
             bluetoothStore = bluetoothStore,
-            timestampProvider = timestampProvider,
         )
         val storeTester = StoreTester(
             store = deviceStore,
@@ -70,33 +75,17 @@ data class TestStores(val testScheduler: TestCoroutineScheduler)
 
     fun useWorkoutStore(
         timestampProvider: IsTimestampProvider = MockTimestampProvider(),
-        init: StoreTester<WorkoutState, WorkoutAction, WorkoutSideEffect>.(workoutStore: WorkoutStore) -> Unit,
+        init: StoreTester<WorkoutProgressState, WorkoutProgressAction>.(workoutProgressStore: WorkoutProgressStore) -> Unit,
     ) {
-        val workoutStore = WorkoutStore(
+        val workoutProgressStore = WorkoutProgressStore(
             mainDispatcher = this.coroutineContext,
             timestampProvider = timestampProvider,
-            workoutResultsStore = WorkoutResultsStore(
-                workoutResultsRepository = object: IsWorkoutResultsRepository {
-                    override suspend fun storeResults(workoutResults: WorkoutResults) {
-                        TODO("Not yet implemented")
-                    }
-
-                    override suspend fun rateExercise(
-                        comment: String,
-                        rating: Int,
-                        exercise: String,
-                    ) {
-                        TODO("Not yet implemented")
-                    }
-                },
-                mainDispatcher = testScheduler,
-            ),
         )
         val storeTester = StoreTester(
-            store = workoutStore,
+            store = workoutProgressStore,
             testScheduler = testScheduler,
         )
-        storeTester.init(workoutStore)
+        storeTester.init(workoutProgressStore)
         storeTester.run()
     }
 

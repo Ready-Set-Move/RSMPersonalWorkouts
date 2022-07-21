@@ -62,7 +62,7 @@ fun ExerciseOverviewScreen(
             Text(text = exercise.name, style = AppTheme.typography.h3)
             Text(text = "Position: ${exercise.position}", style = AppTheme.typography.body1)
             exercise.sets.mapIndexed { index, set ->
-                Text(text = "Set #$index", style = AppTheme.typography.h6)
+                Text(text = "Set #${index+1}", style = AppTheme.typography.h6)
                 Row(modifier = Modifier.padding(AppTheme.spacings.sm)) {
                     Text(text = "${set.tractionGoal} kg", style = AppTheme.typography.body1)
                     Text(text = " | ${set.duration} s", style = AppTheme.typography.body1)

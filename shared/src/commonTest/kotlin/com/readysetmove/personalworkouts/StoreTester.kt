@@ -1,9 +1,8 @@
 package com.readysetmove.personalworkouts
 
 import com.readysetmove.personalworkouts.state.Action
-import com.readysetmove.personalworkouts.state.Effect
+import com.readysetmove.personalworkouts.state.SimpleStore
 import com.readysetmove.personalworkouts.state.State
-import com.readysetmove.personalworkouts.state.Store
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.toList
@@ -12,17 +11,17 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlin.test.assertEquals
 
-class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
+class StoreTester<StateType: State, ActionType: Action>(
     private val testScheduler: TestCoroutineScheduler,
     private val testerMessage: String = "BASE TESTER",
-    override val store: Store<StateType, ActionType, EffectType>,
+    override val store: SimpleStore<StateType, ActionType>,
 )
-    : IsStoreTester<StateType, ActionType, EffectType>, CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
+    : IsStoreTester<StateType, ActionType>, CoroutineScope by CoroutineScope(UnconfinedTestDispatcher(testScheduler)) {
     private val actions = mutableListOf<ActionType>()
     private val expects = mutableListOf<StateType>()
     private val verifys = mutableListOf<() -> Unit>()
     private var prepFunction: () -> Unit = {}
-    private val steps = mutableListOf<IsStoreTester<StateType, ActionType, EffectType>>()
+    private val steps = mutableListOf<IsStoreTester<StateType, ActionType>>()
 
     override fun prepare(runPrepare: () -> Unit) {
         prepFunction = runPrepare
@@ -77,7 +76,7 @@ class StoreTester<StateType: State, ActionType: Action, EffectType: Effect>(
         return lastState
     }
 
-    override fun step(stepMessage: String, buildStep: IsStoreTester<StateType, ActionType, EffectType>.() -> Unit) {
+    override fun step(stepMessage: String, buildStep: IsStoreTester<StateType, ActionType>.() -> Unit) {
         val stepTester = StoreTester(
             testScheduler = testScheduler,
             store = store,

@@ -1,5 +1,8 @@
-package com.readysetmove.personalworkouts.workout
+package com.readysetmove.personalworkouts.workout.progress
 
+import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.Set
+import com.readysetmove.personalworkouts.workout.Workout
 import io.github.aakira.napier.Napier
 
 data class WorkoutProgress(

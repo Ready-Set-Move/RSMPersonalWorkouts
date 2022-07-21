@@ -24,7 +24,6 @@ import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothState
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.DeviceAction
 import com.readysetmove.personalworkouts.device.IsDeviceStore
 import kotlinx.coroutines.Dispatchers
 import org.koin.androidx.compose.get
@@ -69,15 +68,6 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
                 DeviceOverviewCard(
                     deviceName = it,
                     currentWeight = deviceState.value.traction,
-                    trackingActive = deviceState.value.trackingActive,
-                    trackedTractions = deviceState.value.trackedTraction,
-                    onToggleTracking = {
-                        if (deviceState.value.trackingActive) {
-                            deviceStore.dispatch(DeviceAction.StopTracking)
-                        } else {
-                            deviceStore.dispatch(DeviceAction.StartTracking)
-                        }
-                    }
                 ) {
                     store.dispatch(BluetoothAction.SetTara)
                 }

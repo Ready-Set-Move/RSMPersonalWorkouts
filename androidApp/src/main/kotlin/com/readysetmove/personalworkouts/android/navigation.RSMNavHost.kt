@@ -27,8 +27,8 @@ import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothSideEffect
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.workout.WorkoutSideEffect
-import com.readysetmove.personalworkouts.workout.WorkoutStore
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressSideEffect
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.inject
 
@@ -37,8 +37,8 @@ fun RSMNavHost(navController: NavHostController) {
     val context = LocalContext.current
     val appStore: AppStore by inject()
     val appState = appStore.observeState().collectAsState()
-    val workoutStore: WorkoutStore by inject()
-    val workoutSideEffects = workoutStore.observeSideEffect().collectAsState(null)
+    val workoutProgressStore: WorkoutProgressStore by inject()
+    val workoutSideEffects = workoutProgressStore.observeSideEffect().collectAsState(null)
     val btStore: BluetoothStore by inject()
     val btState = btStore.observeState().collectAsState()
 
@@ -81,7 +81,7 @@ fun RSMNavHost(navController: NavHostController) {
     }
 
     LaunchedEffect(workoutSideEffects.value) {
-        if (workoutSideEffects.value is WorkoutSideEffect.NewWorkoutStarted) {
+        if (workoutSideEffects.value is WorkoutProgressSideEffect.NewWorkoutProgressStarted) {
             navController.navigate(WorkoutScreen.ROUTE)
         }
     }

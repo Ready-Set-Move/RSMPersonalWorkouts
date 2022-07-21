@@ -47,10 +47,10 @@ class AppStore(
     init {
 //        launch {
 //            workoutRepository.saveWorkout(
-//                userId = "CoHbkbOvIUYg4y2NSheGQFtiV2P2",
+//                userId = "6QpQhtAwRZVd7CsIQeakb2i3V9k1",
 //                workout = WorkoutBuilder.workout {
-//                    exercise("Overhead Press", position = "?") {
-//                        assessmentTest(5, 10, 15)
+//                    exercise("Deadlift", position = "rings @ 0") {
+//                        assessmentTest(60, 90, 120)
 //                    }
 //                    exercise("Squat", position = "@home: 5 | @studio: holds direct") {
 //                        assessmentTest(45, 60, 95)
@@ -58,7 +58,10 @@ class AppStore(
 //                    exercise("Shrugs", position = "@home: 6 | @studio: holds direct or 0") {
 //                        assessmentTest(40, 60, 85)
 //                    }
-//                    exercise("Drag Curls", position = "?") {
+//                    exercise("Drag Curls", position = "rings @ 5") {
+//                        warmup(xMin = 7, min = 10, med = 14, max = 19)
+//                        set(Set(tractionGoal = 19, duration = 15))
+//                        set(Set(tractionGoal = 19, duration = 12), repeat = 3)
 //                        assessmentTest(5, 10, 15)
 //                    }
 //                }

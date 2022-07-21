@@ -1,10 +1,11 @@
-package com.readysetmove.personalworkouts.workout
+package com.readysetmove.personalworkouts.workout.progress
 
 import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.Store
-import com.readysetmove.personalworkouts.workout.WorkoutAction.*
-import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
+import com.readysetmove.personalworkouts.workout.Exercise
+import com.readysetmove.personalworkouts.workout.Workout
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressAction.*
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -24,38 +25,36 @@ sealed class WorkoutExceptions : Exception() {
 }
 
 // TODO: which of these do we actually need?
-sealed class WorkoutSideEffect : Effect {
-    data class Error(val error: Exception) : WorkoutSideEffect()
-    object NewWorkoutStarted : WorkoutSideEffect()
-    data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutSideEffect()
-    data class NewSetActivated(val tractionGoal: Long) : WorkoutSideEffect()
-    object WorkoutFinished : WorkoutSideEffect()
+sealed class WorkoutProgressSideEffect : Effect {
+    data class Error(val error: Exception) : WorkoutProgressSideEffect()
+    object NewWorkoutProgressStarted : WorkoutProgressSideEffect()
+    data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutProgressSideEffect()
+    data class NewSetActivated(val tractionGoal: Long) : WorkoutProgressSideEffect()
 }
 
 // TODO: revert action flow: Don't listen in app store to side effects instead explicitly
 //  trigger app store actions from here
-class WorkoutStore(
-    initialState: WorkoutState = WorkoutState.NoWorkout,
+class WorkoutProgressStore(
+    initialState: WorkoutProgressState = WorkoutProgressState.NoWorkout,
     mainDispatcher: CoroutineContext,
-    private val workoutResultsStore: WorkoutResultsStore,
     private val timestampProvider: IsTimestampProvider,
 ):
-    Store<WorkoutState, WorkoutAction, WorkoutSideEffect>,
+    Store<WorkoutProgressState, WorkoutProgressAction, WorkoutProgressSideEffect>,
     CoroutineScope by CoroutineScope(mainDispatcher) {
 
     private val state = MutableStateFlow(initialState)
-    private val sideEffect = MutableSharedFlow<WorkoutSideEffect>()
-    override fun observeState(): StateFlow<WorkoutState> = state
-    override fun observeSideEffect(): Flow<WorkoutSideEffect> = sideEffect
+    private val sideEffect = MutableSharedFlow<WorkoutProgressSideEffect>()
+    override fun observeState(): StateFlow<WorkoutProgressState> = state
+    override fun observeSideEffect(): Flow<WorkoutProgressSideEffect> = sideEffect
 
-    override fun dispatch(action: WorkoutAction) {
+    override fun dispatch(action: WorkoutProgressAction) {
         try {
             when(action) {
-                is StartWorkout -> {
+                is StartWorkoutProgress -> {
                     // TODO: workout time metrics (start + finish)
                     state.value = action.workoutStarted
                     launch {
-                        sideEffect.emit(WorkoutSideEffect.NewWorkoutStarted)
+                        sideEffect.emit(WorkoutProgressSideEffect.NewWorkoutProgressStarted)
                     }
                 }
                 is StartExercise -> {
@@ -64,11 +63,12 @@ class WorkoutStore(
                 is TransitionToWaitingToStartSet -> {
                     state.value = action.waitingToStartSet.apply {
                         launch {
-                            sideEffect.emit(WorkoutSideEffect.NewSetActivated(tractionGoal = tractionGoal))
+                            sideEffect.emit(WorkoutProgressSideEffect.NewSetActivated(tractionGoal = tractionGoal))
                         }
                     }
                 }
                 is StartSet -> {
+                    // TODO: skip set for non tracking exercises (body weight, without device)
                     state.value = action.waitingToStartSet
                         .startSet(startTime = timestampProvider.getTimeMillis())
                         .apply {
@@ -83,18 +83,11 @@ class WorkoutStore(
                         }
                 }
                 is FinishSet -> {
+                    // TODO: check for warm up sets and skip set finished state (results + rating screen)
                     state.value = action.resting.finishRest()
                 }
-                // TODO: Skip set
-                is RateSet -> {
+                is GoToNextSet -> {
                     action.setFinished.let { setFinishedState ->
-                        workoutResultsStore.rateSet(
-                            tractionGoal = setFinishedState.tractionGoal,
-                            durationGoal = setFinishedState.durationGoal,
-                            workoutProgress = setFinishedState.workoutProgress,
-                            rating = action.rating,
-                        )
-
                         when {
                             setFinishedState.workoutProgress.atLastSetOfExercise() -> {
                                 state.value = setFinishedState.finishExercise()
@@ -107,20 +100,11 @@ class WorkoutStore(
                         }
                     }
                 }
-                is RateExercise -> {
+                is GoToNextExercise -> {
                     state.value = action.exerciseFinished.let { exerciseFinishedState ->
-                        workoutResultsStore.rateExercise(
-                            comment = action.comment,
-                            rating = action.rating,
-                            exercise = exerciseFinishedState.workoutProgress.activeExercise(),
-                        )
-
                         when {
                             exerciseFinishedState.workoutProgress.atLastSetOfWorkout() -> {
-                                launch {
-                                    Napier.d("Last exercise finished. Emitting WorkoutFinished effect.")
-                                    sideEffect.emit(WorkoutSideEffect.WorkoutFinished)
-                                }
+                                Napier.d("Last exercise finished.")
                                 exerciseFinishedState.finishWorkout ()
                             }
                             else -> exerciseFinishedState.goToNextExercise()
@@ -136,13 +120,13 @@ class WorkoutStore(
             }
         } catch (exception: Exception) {
             launch {
-                sideEffect.emit(WorkoutSideEffect.Error(exception))
+                sideEffect.emit(WorkoutProgressSideEffect.Error(exception))
             }
         }
     }
 
     private fun startWorkCountDown(
-        workingState: WorkoutState.Working
+        workingState: WorkoutProgressState.Working
     ) {
         val workTimeCountdown = launch {
             var timeToWork = workingState.timeLeft
@@ -158,7 +142,7 @@ class WorkoutStore(
         }
         workTimeCountdown.invokeOnCompletion {
             launch {
-                sideEffect.emit(WorkoutSideEffect.WorkFinished(
+                sideEffect.emit(WorkoutProgressSideEffect.WorkFinished(
                     workoutProgress = workingState.workoutProgress,
                     tractionGoal = workingState.tractionGoal,
                 ))
@@ -167,7 +151,7 @@ class WorkoutStore(
         }
     }
 
-    private fun startRestCountDown(restingState: WorkoutState.Resting) {
+    private fun startRestCountDown(restingState: WorkoutProgressState.Resting) {
         val restTimeCounter = launch {
             var timeToRest = restingState.timeLeft
             while (timeToRest > 0) {
