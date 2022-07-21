@@ -9,6 +9,8 @@ import com.readysetmove.personalworkouts.workout.progress.activeExercise
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsState.WaitingForTractions
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsState.WaitingToRateSet
 
+interface WillAcceptTractions
+
 sealed class WorkoutResultsAction: Action {
     data class SetTractions(val waitingToRateSet: WorkoutResultsState.WaitingToRateSet): WorkoutResultsAction()
     data class RateSet(
@@ -19,27 +21,25 @@ sealed class WorkoutResultsAction: Action {
     ): WorkoutResultsAction()
 }
 sealed class WorkoutResultsState: State {
-    object NoResults: WorkoutResultsState()
-    data class WaitingForTractions(val workoutResults: WorkoutResults): WorkoutResultsState()
+    object NoResults: WorkoutResultsState(), WillAcceptTractions
+    data class WaitingForTractions(val workoutResults: WorkoutResults): WorkoutResultsState(), WillAcceptTractions
     data class WaitingToRateSet(val workoutResults: WorkoutResults? = null, val tractions: List<Traction>):
         WorkoutResultsState()
 }
 
 
-fun WorkoutResultsState.WaitingForTractions.setTractionsAction(tractions: List<Traction>):
+fun WillAcceptTractions.setTractionsAction(tractions: List<Traction>):
         WorkoutResultsAction.SetTractions
 {
-    return WorkoutResultsAction.SetTractions(
-        waitingToRateSet = WaitingToRateSet(workoutResults = workoutResults, tractions = tractions)
-    )
-}
-
-fun WorkoutResultsState.NoResults.setTractionsAction(tractions: List<Traction>):
-        WorkoutResultsAction.SetTractions
-{
-    return WorkoutResultsAction.SetTractions(
-        waitingToRateSet = WaitingToRateSet(tractions = tractions)
-    )
+    return if (this is WaitingForTractions) {
+        WorkoutResultsAction.SetTractions(
+            waitingToRateSet = WaitingToRateSet(workoutResults = workoutResults, tractions = tractions)
+        )
+    } else {
+        WorkoutResultsAction.SetTractions(
+            waitingToRateSet = WaitingToRateSet(tractions = tractions)
+        )
+    }
 }
 
 fun WorkoutResultsState.WaitingToRateSet.rateSetAction(

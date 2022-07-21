@@ -1,6 +1,5 @@
 package com.readysetmove.personalworkouts.workout.results
 
-import com.readysetmove.personalworkouts.device.Traction
 import com.readysetmove.personalworkouts.state.SimpleStore
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsAction.*
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsState.NoResults
@@ -17,8 +16,6 @@ class WorkoutResultsStore(
     CoroutineScope by CoroutineScope(mainDispatcher)
 {
     private val state = MutableStateFlow<WorkoutResultsState>(NoResults)
-    var pendingTractions: List<Traction> = emptyList()
-
     override fun observeState() = state
 
     override fun dispatch(action: WorkoutResultsAction) {

@@ -10,7 +10,9 @@ import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressSideEff
 import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressState
 import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
 import com.readysetmove.personalworkouts.workout.progress.startSetAction
+import com.readysetmove.personalworkouts.workout.results.WillAcceptTractions
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsStore
+import com.readysetmove.personalworkouts.workout.results.setTractionsAction
 import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingAction.*
 import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingState.*
 import kotlinx.coroutines.CoroutineScope
@@ -79,7 +81,9 @@ class TractionTrackingStore(
                 state.value = action.tractionsTracked
                 // TODO: split tracked data in: ramp up | work
                 //  also calculate min | max | median of workout phase
-                workoutResultsStore.pendingTractions = action.tractionsTracked.tractions
+                (workoutResultsStore.observeState().value as? WillAcceptTractions)?.let {
+                    workoutResultsStore.dispatch(it.setTractionsAction(action.tractionsTracked.tractions))
+                }
                 launch {
                     listenToNewSetActivated(action.tractionsTracked)
                 }

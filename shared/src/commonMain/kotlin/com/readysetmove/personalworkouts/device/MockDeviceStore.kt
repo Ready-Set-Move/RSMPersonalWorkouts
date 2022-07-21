@@ -14,10 +14,10 @@ class MockDeviceStore(private val mainDispatcher: CoroutineContext): IsDeviceSto
 
     private val tractions = listOf(
         Traction(timestamp = 1000, value = 4f),
+        Traction(timestamp = 4500, value = 200f),
         Traction(timestamp = 2000, value = 5f),
         Traction(timestamp = 3000, value = 8f),
         Traction(timestamp = 4000, value = 10f),
-        Traction(timestamp = 4500, value = 200f),
         Traction(timestamp = 4900, value = 21f),
         Traction(timestamp = 6000, value = 20.4f),
         Traction(timestamp = 7000, value = 13.37f),

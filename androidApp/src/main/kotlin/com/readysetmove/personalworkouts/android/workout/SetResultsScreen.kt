@@ -75,9 +75,6 @@ fun SetResultsScreen(
                 text = "${exercise.name}: ${setIndex + 1} / ${exercise.sets.size}",
                 style = AppTheme.typography.h4
             )
-            if (workoutProgressState is WorkoutProgressState.Resting) {
-                RestingScreen(timeToRest = workoutProgressState.timeLeft)
-            }
             Text(text = "Goal: ${set.tractionGoal} kg", style = AppTheme.typography.h4)
             if (workoutResultsState is WorkoutResultsState.WaitingToRateSet) {
                 Text(
@@ -91,6 +88,9 @@ fun SetResultsScreen(
                         }
                     }
                 }
+            }
+            if (workoutProgressState is WorkoutProgressState.Resting) {
+                RestingScreen(timeToRest = workoutProgressState.timeLeft)
             }
         }
     }
