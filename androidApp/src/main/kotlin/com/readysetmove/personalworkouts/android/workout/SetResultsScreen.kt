@@ -1,8 +1,6 @@
 package com.readysetmove.personalworkouts.android.workout
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
@@ -13,8 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import com.readysetmove.personalworkouts.android.R
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.android.workout.results.TractionsGraph
+import com.readysetmove.personalworkouts.device.getMedianTraction
 import com.readysetmove.personalworkouts.workout.progress.*
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsAction
 import com.readysetmove.personalworkouts.workout.results.WorkoutResultsState
@@ -81,10 +82,22 @@ fun SetResultsScreen(
                     text = "Max: %.1f".format(workoutResultsState.tractions.maxByOrNull { it.value }?.value ?: 0.0),
                     style = AppTheme.typography.body1
                 )
-                workoutResultsState.tractions.let { tractions ->
-                    LazyColumn {
-                        items(tractions) { traction ->
-                            Text(text = "%.1f @ %.1f".format(traction.value, traction.timestamp/1000f))
+                Text(
+                    text = "Median: %.1f".format(workoutResultsState.tractions.getMedianTraction()),
+                    style = AppTheme.typography.body1
+                )
+                TractionsGraph(
+                    tractions = workoutResultsState.tractions,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Dp(350f))
+                )
+                Row(Modifier.height(Dp(200f))) {
+                    workoutResultsState.tractions.let { tractions ->
+                        LazyColumn {
+                            items(tractions.reversed()) { traction ->
+                                Text(text = "%.1f @ %.1f".format(traction.value, traction.timestamp/1000f))
+                            }
                         }
                     }
                 }
