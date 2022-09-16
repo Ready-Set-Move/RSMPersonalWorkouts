@@ -19,7 +19,7 @@ class WorkoutRepository: IsWorkoutRepository {
 
     override suspend fun saveWorkout(userId: String, workout: Workout) {
         db.collection("users").document(userId)
-            .collection("workouts").document("1657638883812").set(workout)
+            .collection("workouts").document(workout.id).set(workout)
     }
 
     override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
