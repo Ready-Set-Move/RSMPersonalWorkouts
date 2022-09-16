@@ -6,6 +6,7 @@ import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.Workout
+import com.readysetmove.personalworkouts.workout.WorkoutBuilder
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -45,28 +46,13 @@ class AppStore(
     private val tag = "AppStore"
 
     init {
-//        launch {
+        launch {
+            val data = WorkoutBuilder.peter()
 //            workoutRepository.saveWorkout(
-//                userId = "6QpQhtAwRZVd7CsIQeakb2i3V9k1",
-//                workout = WorkoutBuilder.workout {
-//                    exercise("Deadlift", position = "rings @ 0") {
-//                        assessmentTest(60, 90, 120)
-//                    }
-//                    exercise("Squat", position = "@home: 5 | @studio: holds direct") {
-//                        assessmentTest(45, 60, 95)
-//                    }
-//                    exercise("Shrugs", position = "@home: 6 | @studio: holds direct or 0") {
-//                        assessmentTest(40, 60, 85)
-//                    }
-//                    exercise("Drag Curls", position = "rings @ 5") {
-//                        warmup(xMin = 7, min = 10, med = 14, max = 19)
-//                        set(Set(tractionGoal = 19, duration = 15))
-//                        set(Set(tractionGoal = 19, duration = 12), repeat = 3)
-//                        assessmentTest(5, 10, 15)
-//                    }
-//                }
+//                userId = data.first,
+//                workout = data.second,
 //            )
-//        }
+        }
         state.value.user?.let {
             fetchWorkoutForUser(it)
         }
@@ -76,7 +62,6 @@ class AppStore(
         launch {
             Napier.d("Starting side effect to fetch workout for user id: ${user.id}", tag = tag)
             // TODO: error handling: reset userId and throw error
-//            val workout = workoutRepository.fetchLatestWorkoutForUser("6QpQhtAwRZVd7CsIQeakb2i3V9k1")
             val workout = workoutRepository.fetchLatestWorkoutForUser(user.id)
             // still the same user set?
             if (state.value.user == user) {

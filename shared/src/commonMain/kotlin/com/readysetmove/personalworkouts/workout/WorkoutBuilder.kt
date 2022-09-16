@@ -14,13 +14,15 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
         ))
     }
 
-    fun assessmentTest(min: Int, med: Int, max: Int) {
-        sets.addAll(setOf(
+    fun assessmentTest(min: Int = 0, med: Int = 0, max: Int = 0, test: Int = 0) {
+        sets.addAll(listOf(
             Set(tractionGoal = min, duration = 15, restTime = 5),
             Set(tractionGoal = med, duration = 10, restTime = 15),
-            Set(tractionGoal = max, duration = 5),
+            Set(tractionGoal = med, duration = 10, restTime = 15),
+            Set(tractionGoal = max, duration = 5, restTime = 20),
+            Set(tractionGoal = max, duration = 5, restTime = 30),
         ))
-        set(Set(max), repeat = 3)
+        set(Set(test), repeat = 3)
     }
 
     fun set(set: Set, repeat: Int = 1) {
@@ -60,6 +62,118 @@ class WorkoutBuilder(private val id: String, val comment: String) {
     private val exercises = mutableListOf<ExerciseBuilder>()
 
     companion object {
+        fun alex(): Pair<String, Workout> {
+            return Pair("CoHbkbOvIUYg4y2NSheGQFtiV2P2", workout(id = "2022-08-22") {
+                exercise("Overhead Press", position = "@home: 22 | @studio: holds 16") {
+                    warmup(10,15,20, 5)
+                    set(Set(20, 15, 30))
+                    set(Set(20, 12, 30), repeat = 3)
+                }
+                exercise("Shrugs", position = "@home: 6 | @studio: holds 0") {
+                    warmup(42,60,85)
+                    set(Set(85, 15, 30))
+                    set(Set(85, 12, 30), repeat = 3)
+                }
+                exercise("Squat", position = "@home: 5 | @studio: holds direct") {
+                    warmup(54,80,107)
+                    set(Set(107, 15, 30))
+                    set(Set(107, 12, 30), repeat = 3)
+                }
+                exercise("Curls", position = "@home: ? | @studio: ?") {
+                    warmup(12,18,25, 8)
+                    set(Set(25, 9, 30), repeat = 4)
+                }
+            })
+        }
+
+        fun marko(): Pair<String, Workout> {
+            return Pair("pGCpK7skdZbDF7THT5XoIk3y25X2", workout(id = "2022-08-25") {
+                exercise("Squat", position = "@home: 5 | @studio: holds direct") {
+                    assessmentTest(15, 30, 45)
+                }
+                exercise("Curls", position = "@home: ? | @studio: ?") {
+                    assessmentTest(5, 8, 10)
+                }
+            })
+        }
+
+        fun flo(): Pair<String, Workout> {
+            return Pair("6QpQhtAwRZVd7CsIQeakb2i3V9k1", workout(id = "2022-09-09") {
+                exercise("Deadlift", position = "rings @ 0") {
+                    warmup(45,60,90, 30)
+                    set(Set(90, 6))
+                    set(Set(90, 20), 3)
+                }
+            })
+        }
+
+        fun jonas(): Pair<String, Workout> {
+            return Pair("rWvysPMNmmVtL7lNonOcHWF1V223", workout(id = "2022-09-02") {
+                exercise("Squat", position = "holds direct") {
+                    assessmentTest(test = 30)
+                }
+                exercise("Overhead Press", position = "?") {
+                    assessmentTest(test = 10)
+                }
+            })
+        }
+
+        fun mario(): Pair<String, Workout> {
+            return Pair("h9bxMY1414Mr9RoLxNq156cLTnF2", workout(id = "2022-08-29") {
+                exercise("Squat", position = "@home: 5 | @studio: holds direct") {
+                    assessmentTest(15, 30, 45)
+                }
+                exercise("Rows", position = "@home: ? | @studio: ?") {
+                    assessmentTest(5, 10, 15)
+                }
+            })
+        }
+
+        fun jose(): Pair<String, Workout> {
+            return Pair("MmLQZ68HuNVg6XcbvyffsGuIzmz1", workout(id = "2022-09-09") {
+                exercise("Front Raise", position = "@home: 4 | @studio: 1") {
+                    warmup(12,18,25, 8)
+                    set(Set(25, 6))
+                    set(Set(25, 20), 3)
+                }
+                exercise("Shrugs", position = "@home: 6 | @studio: 3") {
+                    warmup(30,45,58)
+                    set(Set(58, 6))
+                    set(Set(58, 20), 3)
+                }
+                exercise("Squat", position = "@home: 6 | @studio: 3") {
+                    warmup(85,120,175)
+                    set(Set(175, 6))
+                    set(Set(175, 20), 3)
+                }
+                exercise("Curls", position = "@home: 9 | @studio: 6") {
+                    warmup(15,22,30, 8)
+                    set(Set(30, 6))
+                    set(Set(30, 20), 3)
+                }
+            })
+        }
+
+        fun peter(): Pair<String, Workout> {
+            return Pair("ReWiclRDjLa1ofJSYexsUXHEIh82", workout(id = "2022-09-09") {
+                exercise("Squat", position = "?") {
+                    warmup(30,40,50)
+                    set(Set(50, 6))
+                    set(Set(50, 20), 3)
+                }
+                exercise("Seated Rows", position = "?") {
+                    warmup(10,15, 20)
+                    set(Set(20, 6))
+                    set(Set(20, 20), 3)
+                }
+//                exercise("Chest Press", position = "?") {
+//                    warmup(30,45,58)
+//                    set(Set(58, 6))
+//                    set(Set(58, 20), 3)
+//                }
+            })
+        }
+
         fun workout(
             id: String = "TEST_WORKOUT",
             comment: String = "$id TEST_COMMENT",
