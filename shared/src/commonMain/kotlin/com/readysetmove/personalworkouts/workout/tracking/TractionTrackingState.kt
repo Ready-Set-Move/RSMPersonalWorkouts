@@ -8,7 +8,7 @@ import com.readysetmove.personalworkouts.workout.tracking.TractionTrackingState.
 sealed class TractionTrackingAction: Action {
     data class PrepareTracking(val waitingToTrackTraction: WaitingToTrackTraction): TractionTrackingAction()
     data class StartTracking(val tracking: Tracking): TractionTrackingAction()
-    data class StopTracking(val tractionsTracked: TractionsTracked): TractionTrackingAction()
+    object StopTracking: TractionTrackingAction()
     data class TransitionToTractionsTracked(val tractionsTracked: TractionsTracked): TractionTrackingAction()
 }
 
@@ -36,7 +36,7 @@ fun Tracking.addTraction(traction: Traction): Tracking {
 }
 
 fun Tracking.stopTrackingAction(): TractionTrackingAction.StopTracking {
-    return TractionTrackingAction.StopTracking(tractionsTracked = TractionsTracked(tractions = tractions))
+    return TractionTrackingAction.StopTracking
 }
 fun Tracking.transitionToTractionsTrackedAction(): TractionTrackingAction.TransitionToTractionsTracked {
     return TractionTrackingAction.TransitionToTractionsTracked(tractionsTracked = TractionsTracked(tractions = tractions))

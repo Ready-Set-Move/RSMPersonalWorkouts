@@ -70,7 +70,10 @@ class TractionTrackingStore(
                     )
                 }.apply {
                     invokeOnCompletion {
-                        dispatch(action.tracking.transitionToTractionsTrackedAction())
+                        val trackingState = state.value
+                        if (trackingState is Tracking) {
+                            dispatch(trackingState.transitionToTractionsTrackedAction())
+                        }
                     }
                 }
                 launch {
@@ -117,11 +120,13 @@ class TractionTrackingStore(
     }
 
     private suspend fun trackTractions(tracking: Tracking, startedAt: Long) {
+        var trackingState = tracking
         deviceStore.observeState().collect {
-            state.value = tracking.addTraction(Traction(
+            trackingState = trackingState.addTraction(Traction(
                 timestamp = timestampProvider.getTimeMillis() - startedAt,
                 value = it.traction,
             ))
+            state.value = trackingState
         }
     }
 
