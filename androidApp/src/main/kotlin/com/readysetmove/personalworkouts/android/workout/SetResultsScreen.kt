@@ -88,9 +88,10 @@ fun SetResultsScreen(
                 )
                 TractionsGraph(
                     tractions = workoutResultsState.tractions,
+                    tractionGoal = set.tractionGoal ,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dp(350f))
+                        .height(Dp(350f)),
                 )
                 Row(Modifier.height(Dp(200f))) {
                     workoutResultsState.tractions.let { tractions ->

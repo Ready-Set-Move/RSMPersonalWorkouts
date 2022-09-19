@@ -14,7 +14,7 @@ import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.device.Traction
 
 @Composable
-fun TractionsGraph(tractions: List<Traction>, modifier : Modifier) {
+fun TractionsGraph(tractions: List<Traction>, tractionGoal: Int, modifier : Modifier) {
     if (tractions.isEmpty()) return
 
     val maxTraction = tractions.maxOf { it.value }
@@ -24,9 +24,15 @@ fun TractionsGraph(tractions: List<Traction>, modifier : Modifier) {
         .padding(horizontal = AppTheme.spacings.sm, vertical = AppTheme.spacings.sm),
         contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            drawLine(
+                color = Color.Black,
+                start = Offset(0f, size.height - (size.height * (tractionGoal.toFloat()/maxTraction))),
+                end = Offset(size.width, size.height - (size.height * (tractionGoal.toFloat()/maxTraction))),
+                strokeWidth = 2f,
+            )
             tractions.fold<Traction, Offset?>(initial = null) { prev, current ->
                 val x = size.width * (current.timestamp.toFloat()/maxTimestamp.toFloat())
-                val y = size.height * (current.value/maxTraction)
+                val y = size.height - (size.height * (current.value/maxTraction))
                 val currentPoint = Offset(x=x,y=y)
                 drawCircle(
                     color = Color.Red,
