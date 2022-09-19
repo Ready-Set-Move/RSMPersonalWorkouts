@@ -14,6 +14,16 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
         ))
     }
 
+    fun assessmentWarmup(min: Int, med: Int, max: Int) {
+        sets.addAll(listOf(
+            Set(tractionGoal = min, duration = 15, restTime = 5),
+            Set(tractionGoal = med, duration = 10, restTime = 10),
+            Set(tractionGoal = med, duration = 10, restTime = 10),
+            Set(tractionGoal = max, duration = 5, restTime = 15),
+            Set(tractionGoal = max, duration = 5),
+        ))
+    }
+
     fun assessmentTest(min: Int = 0, med: Int = 0, max: Int = 0, test: Int = 0) {
         sets.addAll(listOf(
             Set(tractionGoal = min, duration = 15, restTime = 5),
@@ -150,6 +160,24 @@ class WorkoutBuilder(private val id: String, val comment: String) {
                     warmup(15,22,30, 8)
                     set(Set(30, 6))
                     set(Set(30, 20), 3)
+                }
+            })
+        }
+
+        fun test(): Pair<String, Workout> {
+            return Pair("npt9ZyOesMaYEIaZjGJly8w7C773", workout(id = "2022-09-09") {
+                exercise("Shrugs", position = "@home: 6 | @studio: 3") {
+                    warmup(25,35,50)
+                    set(Set(50, 20), 3)
+                }
+            })
+        }
+
+        fun priya(): Pair<String, Workout> {
+            return Pair("QetLWHUtRoZFpLufMEZxIvsoqzT2", workout(id = "2022-09-09") {
+                exercise("Bench Press", position = "Griffe @3") {
+                    assessmentWarmup(5,8,10)
+                    set(Set(15, 20), 3)
                 }
             })
         }
