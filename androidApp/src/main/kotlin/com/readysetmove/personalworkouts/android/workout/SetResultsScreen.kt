@@ -1,8 +1,6 @@
 package com.readysetmove.personalworkouts.android.workout
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayCircle
@@ -72,39 +70,46 @@ fun SetResultsScreen(
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)
         ) {
-            Text(
-                text = "${exercise.name}: ${setIndex + 1} / ${exercise.sets.size}",
-                style = AppTheme.typography.h4
-            )
-            Text(text = "Goal: ${set.tractionGoal} kg", style = AppTheme.typography.h4)
+            Row {
+                Column {
+                    Text(
+                        text = "${exercise.name}: ${setIndex + 1} / ${exercise.sets.size}",
+                        style = AppTheme.typography.h4
+                    )
+                    Text(
+                        text = "Goal: ${set.duration}s @ ${set.tractionGoal}kg",
+                        style = AppTheme.typography.h4,
+                    )
+                    if (workoutResultsState is WorkoutResultsState.WaitingToRateSet) {
+                        Text(
+                            text = "Max: %.1f".format(workoutResultsState.tractions.maxByOrNull { it.value }?.value ?: 0.0),
+                            style = AppTheme.typography.body1
+                        )
+                        Text(
+                            text = "Median: %.1f".format(workoutResultsState.tractions.getMedianTraction()),
+                            style = AppTheme.typography.body1
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier.padding(start = AppTheme.spacings.sm)
+                ) {
+                    if (workoutProgressState is WorkoutProgressState.Resting) {
+                        RestingIndicator(
+                            timeToRest = workoutProgressState.timeLeft,
+                            duration = set.restTime
+                        )
+                    }
+                }
+            }
             if (workoutResultsState is WorkoutResultsState.WaitingToRateSet) {
-                Text(
-                    text = "Max: %.1f".format(workoutResultsState.tractions.maxByOrNull { it.value }?.value ?: 0.0),
-                    style = AppTheme.typography.body1
-                )
-                Text(
-                    text = "Median: %.1f".format(workoutResultsState.tractions.getMedianTraction()),
-                    style = AppTheme.typography.body1
-                )
                 TractionsGraph(
                     tractions = workoutResultsState.tractions,
-                    tractionGoal = set.tractionGoal ,
+                    tractionGoal = set.tractionGoal,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(Dp(350f)),
                 )
-                Row(Modifier.height(Dp(200f))) {
-                    workoutResultsState.tractions.let { tractions ->
-                        LazyColumn {
-                            items(tractions.reversed()) { traction ->
-                                Text(text = "%.1f @ %.1f".format(traction.value, traction.timestamp/1000f))
-                            }
-                        }
-                    }
-                }
-            }
-            if (workoutProgressState is WorkoutProgressState.Resting) {
-                RestingScreen(timeToRest = workoutProgressState.timeLeft)
             }
         }
     }
