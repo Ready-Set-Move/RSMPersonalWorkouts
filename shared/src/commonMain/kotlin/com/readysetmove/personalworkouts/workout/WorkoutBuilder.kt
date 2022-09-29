@@ -8,9 +8,18 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
             sets.add(Set(tractionGoal = xMin, duration = 15, 5))
         }
         sets.addAll(setOf(
-            Set(tractionGoal = min, duration = 10, restTime = 10),
+            Set(tractionGoal = min, duration = 12, restTime = 10),
+            Set(tractionGoal = med, duration = 7, restTime = 15),
+            Set(tractionGoal = max, duration = 3),
+        ))
+    }
+
+    fun longWarmup(min: Int, med: Int) {
+        sets.addAll(setOf(
+            Set(tractionGoal = min, duration = 10, restTime = 5),
+            Set(tractionGoal = min, duration = 10, restTime = 5),
             Set(tractionGoal = med, duration = 5, restTime = 15),
-            Set(tractionGoal = max, duration = 1),
+            Set(tractionGoal = med, duration = 5),
         ))
     }
 
@@ -32,7 +41,7 @@ class ExerciseBuilder(val name: String, val comment: String, val position: Strin
             Set(tractionGoal = max, duration = 5, restTime = 20),
             Set(tractionGoal = max, duration = 5, restTime = 30),
         ))
-        set(Set(test), repeat = 3)
+        set(Set(test, duration = 4), repeat = 3)
     }
 
     fun set(set: Set, repeat: Int = 1) {
@@ -72,6 +81,27 @@ class WorkoutBuilder(private val id: String, val comment: String) {
     private val exercises = mutableListOf<ExerciseBuilder>()
 
     companion object {
+        fun rob(): Pair<String, Workout> {
+            return Pair("KjofQw7eUQdv2W7Bm6FcM5Lvbj33", workout(id = "2022-09-27") {
+                exercise("Chest Press", position = "Ringe | studio@12 | home@14", comment = "max: 59,5") {
+                    warmup(15, 20, 30)
+                    set(Set(30, 30), 3)
+                }
+                exercise("Leg Raises Left", position = "Fußschlaufe direkt an Wand | Standfuß vor Zugfuß | Hüfte nach vorn strecken", comment = "max: ~28 eher runter auf 13kg load") {
+                    warmup(8, 10, 13)
+                    set(Set(13, 30), 3)
+                }
+                exercise("Leg Raises Right", position = "Fußschlaufe direkt an Wand | Standfuß vor Zugfuß | Hüfte nach vorn strecken") {
+                    warmup(8, 10, 13)
+                    set(Set(13, 30), 3)
+                }
+                exercise("Curls", position = "Ringe | studio@6 | home@8", comment = "max: 39.2") {
+                    warmup(10, 15, 19)
+                    set(Set(19, 30), 3)
+                }
+            })
+        }
+
         fun alex(): Pair<String, Workout> {
             return Pair("CoHbkbOvIUYg4y2NSheGQFtiV2P2", workout(id = "2022-08-22") {
                 exercise("Overhead Press", position = "@home: 22 | @studio: holds 16") {
@@ -108,22 +138,40 @@ class WorkoutBuilder(private val id: String, val comment: String) {
         }
 
         fun flo(): Pair<String, Workout> {
-            return Pair("6QpQhtAwRZVd7CsIQeakb2i3V9k1", workout(id = "2022-09-09") {
+            return Pair("6QpQhtAwRZVd7CsIQeakb2i3V9k1", workout(id = "2022-09-28") {
                 exercise("Deadlift", position = "rings @ 0") {
-                    warmup(45,60,90, 30)
-                    set(Set(90, 6))
-                    set(Set(90, 20), 3)
+                    warmup(50,75,105, 30)
+                    set(Set(105, 25), 3)
                 }
             })
         }
 
         fun jonas(): Pair<String, Workout> {
-            return Pair("rWvysPMNmmVtL7lNonOcHWF1V223", workout(id = "2022-09-02") {
-                exercise("Squat", position = "holds direct") {
-                    assessmentTest(test = 30)
+            return Pair("7QdxrrDqBKeHCmyWtZs3Bq3buY03", workout(id = "2022-09-02") {
+                exercise("Front Squat", position = "bar @ 8") {
+                    longWarmup(16,24)
+                    set(Set(24, 25), 3)
                 }
-                exercise("Overhead Press", position = "?") {
-                    assessmentTest(test = 10)
+                exercise("Front Press", position = "bar @ 16") {
+                    longWarmup(10,15)
+                    set(Set(15, 25), 3)
+                }
+            })
+        }
+
+        fun magda(): Pair<String, Workout> {
+            return Pair("jpQYQ09AvXQ7vaXW8NZyLITVtCL2", workout(id = "2022-09-23") {
+                exercise("Leg Raises Left", position = "Fußschlaufe direkt an Wand") {
+                    assessmentWarmup(5, 8, 10)
+                    set(Set(10, 20), 3)
+                }
+                exercise("Leg Raises Right", position = "Fußschlaufe direkt an Wand") {
+                    assessmentWarmup(5, 8, 10)
+                    set(Set(10, 20), 3)
+                }
+                exercise("Overhead Press", position = "Holds @14") {
+                    assessmentWarmup(5, 6, 7)
+                    set(Set(7, 20), 3)
                 }
             })
         }
@@ -165,7 +213,7 @@ class WorkoutBuilder(private val id: String, val comment: String) {
         }
 
         fun test(): Pair<String, Workout> {
-            return Pair("npt9ZyOesMaYEIaZjGJly8w7C773", workout(id = "2022-09-09") {
+            return Pair("akmgotyWSNUxYIfEfqUOA9trEDv1", workout(id = "2022-09-09") {
                 exercise("Shrugs", position = "@home: 6 | @studio: 3") {
                     warmup(25,35,50)
                     set(Set(50, 20), 3)
@@ -174,31 +222,32 @@ class WorkoutBuilder(private val id: String, val comment: String) {
         }
 
         fun priya(): Pair<String, Workout> {
-            return Pair("QetLWHUtRoZFpLufMEZxIvsoqzT2", workout(id = "2022-09-09") {
-                exercise("Bench Press", position = "Griffe @3") {
-                    assessmentWarmup(5,8,10)
-                    set(Set(15, 20), 3)
+            return Pair("QetLWHUtRoZFpLufMEZxIvsoqzT2", workout(id = "2022-09-29") {
+                exercise("Bench Press", position = "Griffe @4") {
+                    warmup(5, 7, 10)
+                    set(Set(10, 20), 3)
                 }
             })
         }
 
         fun peter(): Pair<String, Workout> {
-            return Pair("ReWiclRDjLa1ofJSYexsUXHEIh82", workout(id = "2022-09-09") {
-                exercise("Squat", position = "?") {
-                    warmup(30,40,50)
-                    set(Set(50, 6))
-                    set(Set(50, 20), 3)
+            return Pair("JmvGz1oeEwMq9nVj7GdtHX3L8mJ2", workout(id = "2022-09-29") {
+                exercise("Seated Rows", position = "Untergriff Bar @4") {
+                    warmup(22,30, 45)
+                    set(Set(35, 35), 3)
                 }
-                exercise("Seated Rows", position = "?") {
-                    warmup(10,15, 20)
-                    set(Set(20, 6))
-                    set(Set(20, 20), 3)
+                exercise("Leg Raises Left", position = "Fußschlaufe direkt an Wand") {
+                    warmup(5,8, 10)
+                    set(Set(10, 27), 3)
                 }
-//                exercise("Chest Press", position = "?") {
-//                    warmup(30,45,58)
-//                    set(Set(58, 6))
-//                    set(Set(58, 20), 3)
-//                }
+                exercise("Leg Raises Right", position = "Fußschlaufe direkt an Wand") {
+                    warmup(5,8, 10)
+                    set(Set(10, 27), 3)
+                }
+                exercise("Chest Press", position = "Bar @15") {
+                    warmup(15,25, 40)
+                    set(Set(30, 20), 3)
+                }
             })
         }
 

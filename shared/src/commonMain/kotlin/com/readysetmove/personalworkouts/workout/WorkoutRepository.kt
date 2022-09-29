@@ -1,7 +1,10 @@
 package com.readysetmove.personalworkouts.workout
 
+import com.readysetmove.personalworkouts.IsTimestampProvider
 import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.firestore
+import dev.gitlive.firebase.firestore.orderBy
 import io.github.aakira.napier.Napier
 
 interface IsWorkoutRepository {
@@ -9,7 +12,7 @@ interface IsWorkoutRepository {
     suspend fun saveWorkout(userId: String, workout: Workout)
 }
 
-class WorkoutRepository: IsWorkoutRepository {
+class WorkoutRepository(val timestampProvider: IsTimestampProvider): IsWorkoutRepository {
     private val db = Firebase.firestore
 
     init {
@@ -18,14 +21,15 @@ class WorkoutRepository: IsWorkoutRepository {
     }
 
     override suspend fun saveWorkout(userId: String, workout: Workout) {
+        val id = timestampProvider.getCurrentDate()
         db.collection("users").document(userId)
-            .collection("workouts").document(workout.id).set(workout)
+            .collection("workouts").document(id).set(workout.copy(id = id))
     }
 
     override suspend fun fetchLatestWorkoutForUser(userId: String): Workout {
         db.collection("users").document(userId)
             .collection("workouts")
-//                    .orderBy(FieldPath("users/workouts").documentId, direction = Direction.DESCENDING)
+            .orderBy("id", direction = Direction.DESCENDING)
             .limit(1)
             .get().documents.let {
                 if (it.isEmpty()) {
