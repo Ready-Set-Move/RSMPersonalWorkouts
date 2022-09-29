@@ -38,6 +38,7 @@ fun WorkoutScreen(
                     WorkingScreen(
                         tractionGoal = (state.tractionGoal/1000).toInt(),
                         timeToWork = state.timeLeft,
+                        timeGoal = workoutProgress.activeSet().duration,
                         currentLoad = deviceState.value.traction,
                     )
                 }
