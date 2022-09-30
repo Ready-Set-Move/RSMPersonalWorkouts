@@ -26,8 +26,7 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 import org.koin.dsl.module
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.time.Instant
 
 class App : Application() {
     override fun onCreate() {
@@ -59,7 +58,7 @@ class App : Application() {
                 }
 
                 override fun getCurrentDate(): String {
-                    return DateTimeFormatter.ISO_DATE.format(LocalDate.now())
+                    return Instant.now().toString()
                 }
             }
         }
