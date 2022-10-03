@@ -148,13 +148,13 @@ class WorkoutBuilder(private val id: String, val comment: String) {
 
         fun jonas(): Pair<String, Workout> {
             return Pair("7QdxrrDqBKeHCmyWtZs3Bq3buY03", workout(id = "2022-09-02") {
-                exercise("Front Squat", position = "bar @ 8") {
-                    longWarmup(16,24)
-                    set(Set(24, 25), 3)
-                }
                 exercise("Front Press", position = "bar @ 16") {
-                    longWarmup(10,15)
+                    warmup(10, 15, 20)
                     set(Set(15, 25), 3)
+                }
+                exercise("Front Squat", position = "bar @ 8") {
+                    warmup(12, 20, 25)
+                    set(Set(20, 20), 3)
                 }
             })
         }
@@ -232,7 +232,7 @@ class WorkoutBuilder(private val id: String, val comment: String) {
 
         fun peter(): Pair<String, Workout> {
             return Pair("JmvGz1oeEwMq9nVj7GdtHX3L8mJ2", workout(id = "2022-09-29") {
-                exercise("Seated Rows", position = "Untergriff Bar @4") {
+                exercise("Seated Rows", position = "Untergriff Bar @4")     {
                     warmup(22,30, 45)
                     set(Set(35, 35), 3)
                 }

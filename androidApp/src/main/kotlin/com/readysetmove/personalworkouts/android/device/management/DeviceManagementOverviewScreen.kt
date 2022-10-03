@@ -68,9 +68,10 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
                 DeviceOverviewCard(
                     deviceName = it,
                     currentWeight = deviceState.value.traction,
-                ) {
-                    store.dispatch(BluetoothAction.SetTara)
-                }
+                    onReadSettings = { store.dispatch(BluetoothAction.ReadSettings) },
+                    onCalibrate = { store.dispatch(BluetoothAction.Calibrate) },
+                    onSetTara = { store.dispatch(BluetoothAction.SetTara) },
+                )
             }
             if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))

@@ -45,7 +45,8 @@ class App : Application() {
             BluetoothStore(
                 bluetoothService = bluetoothService,
                 initialState = BluetoothState(
-                    deviceName = "Roberts Waage",
+                    deviceName = "Ready Set Move Test1",
+//                    deviceName = "Roberts Waage",
                     bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
                 ioDispatcher = Dispatchers.IO,
                 mainDispatcher = Dispatchers.Main,

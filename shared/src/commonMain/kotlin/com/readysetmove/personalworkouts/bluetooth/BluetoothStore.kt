@@ -6,6 +6,7 @@ import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,11 +30,14 @@ sealed class BluetoothAction : Action {
     object ScanAndConnect : BluetoothAction()
     object StopScanning : BluetoothAction()
     object SetTara : BluetoothAction()
+    object ReadSettings : BluetoothAction()
+    object Calibrate : BluetoothAction()
 }
 
 
 sealed class BluetoothSideEffect : Effect {
     data class Error(val error: Exception) : BluetoothSideEffect()
+    data class FatalError(val error: Exception) : BluetoothSideEffect()
     data class DeviceDisConnected(val deviceName: String) : BluetoothSideEffect()
 }
 
@@ -46,6 +50,7 @@ class BluetoothStore(
     Store<BluetoothState, BluetoothAction, BluetoothSideEffect>,
     CoroutineScope by CoroutineScope(mainDispatcher) {
 
+    private val classLogTag = "BluetoothStore"
     private val state = MutableStateFlow(
         initialState.copy()
     )
@@ -86,9 +91,11 @@ class BluetoothStore(
                 when {
                     !state.value.bluetoothEnabled || !state.value.bluetoothPermissionsGranted -> {
                         // TODO: side effect to inform consumer
+                        Napier.d(tag = classLogTag) { "Bluetooth not enabled or permissions missing" }
                         return
                     }
                     state.value.activeDevice != null || connectJob != null -> {
+                        Napier.d(tag = classLogTag) { "Connection already open while attempting to reconnect" }
                         // in this case we already started a connection
                         return
                     }
@@ -122,6 +129,12 @@ class BluetoothStore(
             is BluetoothAction.SetTara -> {
                 if (state.value.activeDevice != null) bluetoothService.setTara()
             }
+            is BluetoothAction.ReadSettings -> {
+                if (state.value.activeDevice != null) bluetoothService.readSettings()
+            }
+            is BluetoothAction.Calibrate -> {
+                if (state.value.activeDevice != null) bluetoothService.calibrate()
+            }
         }
     }
 
@@ -149,6 +162,11 @@ class BluetoothStore(
                                     dispatch(BluetoothAction.SetBluetoothEnabled(false))
                                 is BluetoothConnectPermissionNotGrantedException ->
                                     dispatch(BluetoothAction.SetBluetoothPermissionsGranted(false))
+                                is BluetoothService.BluetoothException.ConnectionBrokenException -> {
+                                    Napier.d(tag = classLogTag) { action.cause.toString() }
+                                    // TODO: need to catch these and restart the App
+                                    sideEffect.emit(BluetoothSideEffect.FatalError(action.cause))
+                                }
                                 else -> sideEffect.emit(BluetoothSideEffect.Error(action.cause))
                             }
                             cancel()

@@ -15,6 +15,7 @@ import android.os.Build
 import android.util.Log
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.DisConnected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.*
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
@@ -27,6 +28,8 @@ import kotlinx.coroutines.flow.*
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
 class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
+    private val classLogTag = "AndroidBluetoothService"
+
     private val bleAdapter by lazy {
         val bluetoothManager =
             androidContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -60,31 +63,51 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         return zeeFlow
     }
 
-    override fun setTara() {
+    private fun writeCharacteristic(value: Byte) {
         gattInUse?.let { gatt ->
-            val setTaraCharacteristic =
-                gatt.getService(serviceUuid)
-                    .getCharacteristic(dataUuid)
-            setTaraCharacteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            setTaraCharacteristic.value =
-                byteArrayOf(100,
-                    (1 shr 0).toByte(),
-                    (1 shr 8).toByte(),
-                    (1 shr 16).toByte(),
-                    (1 shr 24).toByte()
-                )
+            Napier.d(tag = classLogTag) { "Writing $value to data characteristic" }
+
+            // in some cases this happens and we can't recover from that by reconnect
+            // the app needs to be restarted here
+            val service = gatt.getService(serviceUuid)
+                ?: throw ConnectionBrokenException("Service was null. Could not write characteristic: $value. App needs restart.")
+
+            val characteristic = service.getCharacteristic(sendUuid)
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            characteristic.value = byteArrayOf(value,
+                (1 shr 0).toByte(),
+                (1 shr 8).toByte(),
+                (1 shr 16).toByte(),
+                (1 shr 24).toByte()
+            )
             if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                     Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
             ) {
-                throw BluetoothPermissionNotGrantedException("Could not set tara.")
+                throw BluetoothPermissionNotGrantedException("Could not write characteristic: $value.")
             }
-            gatt.writeCharacteristic(setTaraCharacteristic)
-        } ?: throw NotConnectedException("Could not set tara.")
+            gatt.writeCharacteristic(characteristic)
+        } ?: throw NotConnectedException("Could not write characteristic: $value.")
+    }
+
+    override fun setTara() {
+        Napier.d(tag = classLogTag) { "Set Tara" }
+        writeCharacteristic(setTara)
+    }
+
+    override fun calibrate() {
+        Napier.d(tag = classLogTag) { "Calibrate" }
+        writeCharacteristic(calibrate)
+    }
+
+    override fun readSettings() {
+        Napier.d(tag = classLogTag) { "Read Settings" }
+        writeCharacteristic(readAll)
+//        writeCharacteristic(getWiFiStatus)
     }
 
     private fun startConnectCallback(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
-        val methodTag = "startConnectCallback"
+        val methodTag = "$classLogTag.startConnectCallback"
         return callbackFlow {
             if (!getBluetoothEnabled()) {
                 trySendBlocking(DisConnected(BluetoothDisabledException("Bluetooth needs to be enabled to start scanning")))
@@ -152,19 +175,19 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
     }
 
     private fun scanForDevice(deviceName: String): Flow<BluetoothDevice> {
-        Log.d("scanForDevice", "Called with deviceName=$deviceName. Creating flow.")
+        val methodLogTag = "$classLogTag.scanForDevice"
+        Napier.d(tag = methodLogTag) { "Called with deviceName=$deviceName. Creating flow." }
         return callbackFlow {
-            Log.d("scanForDevice.scanFlow", "Start scanning for device $deviceName")
+            Napier.d(tag = methodLogTag) { "Start scanning for device $deviceName" }
             val scanCallback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult) {
-                    Log.d("scanForDevice.scanCallback.onScanResult",
-                        "Found BLE device address: ${result.device.address}")
+                    Napier.d(tag = "$methodLogTag.onScanResult") { "Found BLE device address: ${result.device.address}" }
                     trySendBlocking(result.device)
                     channel.close()
                 }
 
                 override fun onScanFailed(errorCode: Int) {
-                    Log.d("scanForDevice.scanCallback.onScanFailed", "Error: $errorCode")
+                    Napier.d(tag = "$methodLogTag.onScanFailed") { "Error: $errorCode" }
                     cancel(CancellationException("BLE Scan failed",
                         ScanFailedException("Error code: $errorCode")))
                 }
@@ -178,7 +201,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
             bleAdapter.bluetoothLeScanner.startScan(filters, scanSettings, scanCallback)
 
             awaitClose {
-                Log.d("scanForDevice", "Stopping BLE scanner")
+                Napier.d(tag = methodLogTag) { "Stopping BLE scanner" }
                 bleAdapter.bluetoothLeScanner.stopScan(scanCallback)
             }
         }

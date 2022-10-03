@@ -9,6 +9,8 @@ import android.util.Log
 import io.github.aakira.napier.Napier
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
+import java.util.*
 
 class BTLECallback(
     private val androidContext: Context,
@@ -61,8 +63,24 @@ class BTLECallback(
             reconnect(status = status, gatt = gatt, logTag)
         } else {
             Napier.d("services discovered", tag = logTag)
-            enableTractionNotifications(gatt, classLogTag)
+            if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
+                    Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                return onDisconnect(BluetoothService.BluetoothException.BluetoothPermissionNotGrantedException(
+                    "Needed permissions no longer granted. Device: ${device.address}"))
+            }
+            gatt.requestMtu(517)
         }
+    }
+
+    override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
+        if (gatt == null || status != BluetoothGatt.GATT_SUCCESS) {
+            Napier.d(tag = classLogTag) { "Failed to change MTU" }
+            return
+        }
+        Napier.d(tag = classLogTag) { "MTU changed to $mtu" }
+        enableNotifications4Characteristic(gatt = gatt, logTag = classLogTag, characteristicUUID = tractionUuid)
     }
 
     override fun onCharacteristicChanged(
@@ -70,12 +88,27 @@ class BTLECallback(
         characteristic: BluetoothGattCharacteristic?,
     ) {
         val logTag = "$classLogTag.onCharacteristicChanged"
-        Napier.d(tag = logTag, message = "started")
-        if (characteristic == null) return
-        val weight =
-            ByteBuffer.wrap(characteristic.value).order(ByteOrder.LITTLE_ENDIAN)
-                .float
-        onWeightReceived(weight)
+        if (characteristic == null) {
+            Napier.d(tag = logTag) { "Null characteristic received" }
+            return
+        }
+
+        when (characteristic.uuid) {
+            tractionUuid -> {
+                val weight =
+                    ByteBuffer.wrap(characteristic.value).order(ByteOrder.LITTLE_ENDIAN)
+                        .float
+                onWeightReceived(weight)
+            }
+            dataUuid -> {
+                Napier.d(tag = logTag) { "Data received" }
+                val payloadString = String(characteristic.value, StandardCharsets.UTF_8)
+                Napier.d(tag = logTag) { "BLE Payload: $payloadString" }
+            }
+            else -> {
+                Napier.d(tag = logTag) { "Unknown characteristic received: ${characteristic.uuid} with ${characteristic.value}" }
+            }
+        }
     }
 
     override fun onDescriptorWrite(
@@ -85,17 +118,30 @@ class BTLECallback(
     ) {
         val logTag = "$classLogTag.onDescriptorWrite"
         Napier.d(tag = logTag, message = "received ${descriptor?.uuid}")
-        if (gatt == null || descriptor?.uuid != cccdUuid) return
-        if (status != BluetoothGatt.GATT_SUCCESS) {
-            return reconnect(status = status, gatt = gatt, logTag)
+        if (gatt == null) return
+        descriptor?.let {
+            if (it.uuid != cccdUuid) return
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Napier.d(tag = logTag, message = "Descriptor write not successful for ${it.characteristic.uuid}. Attempt reconnect.")
+                return reconnect(status = status, gatt = gatt, logTag)
+            }
+            Napier.d(tag = logTag, message = "CCC descriptor successfully enabled for ${it.characteristic.uuid}.")
+
+            if (it.characteristic.uuid == tractionUuid) {
+                Napier.d(tag = logTag, message = "Traction notification descriptor enabled. Attempt connecting data descriptor.")
+                enableNotifications4Characteristic(gatt = gatt, logTag = classLogTag, characteristicUUID = dataUuid)
+            } else {
+                Napier.d(tag = logTag, message = "All notification descriptors enabled. Device connected")
+                onDeviceConnected()
+            }
         }
-        Napier.d(tag = logTag, message = "CCC descriptor successfully enabled")
-        onDeviceConnected()
     }
 
-    private fun enableTractionNotifications(
+    private fun enableNotifications4Characteristic(
         gatt: BluetoothGatt,
         logTag: String?,
+        characteristicUUID: UUID,
     ) {
         if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                 Manifest.permission.BLUETOOTH_CONNECT)
@@ -104,23 +150,23 @@ class BTLECallback(
             return onDisconnect(BluetoothService.BluetoothException.BluetoothPermissionNotGrantedException(
                 "Needed permissions no longer granted. Device: ${device.address}"))
         }
-        val tractionCharacteristic =
+        val characteristic =
             gatt.getService(serviceUuid)
-                .getCharacteristic(tractionUuid)
+                .getCharacteristic(characteristicUUID)
 
-        tractionCharacteristic.getDescriptor(cccdUuid)?.let { cccDescriptor ->
-            if (!gatt.setCharacteristicNotification(tractionCharacteristic,
+        characteristic.getDescriptor(cccdUuid)?.let { cccDescriptor ->
+            if (!gatt.setCharacteristicNotification(characteristic,
                     true)
             ) {
-                return onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("setCharacteristicNotification failed for tractionCharacteristic: $tractionCharacteristic"))
+                return onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("setCharacteristicNotification failed for characteristic: $characteristic"))
             }
 
             cccDescriptor.value =
                 BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             gatt.writeDescriptor(cccDescriptor)
-            Napier.d(tag = logTag, message = "traction characteristic enabled")
+            Napier.d(tag = logTag, message = "characteristic $characteristicUUID enabled")
         }
-            ?: onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("Traction characteristic does not contain CCC descriptor. $tractionCharacteristic"))
+            ?: onDisconnect(BluetoothService.BluetoothException.ConnectFailedException("characteristic $characteristicUUID does not contain CCC descriptor. $characteristic"))
     }
 
     private fun reconnect(status: Int, gatt: BluetoothGatt, logTag: String) {

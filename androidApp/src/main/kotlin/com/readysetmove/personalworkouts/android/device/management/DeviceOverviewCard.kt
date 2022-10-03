@@ -11,7 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 
 @Composable
-fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onSetTara: () -> Unit) {
+fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onCalibrate: () -> Unit, onSetTara: () -> Unit, onReadSettings: () -> Unit) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
@@ -22,6 +22,12 @@ fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onSetTara: () -
             Spacer(Modifier.height(AppTheme.spacings.md))
             Text(text = "${"%.2f".format(currentWeight)} kg", style = AppTheme.typography.h2)
             Spacer(Modifier.height(AppTheme.spacings.md))
+            Button(onClick = onReadSettings) {
+                Text(text = "Read Settings")
+            }
+            Button(onClick = onCalibrate) {
+                Text(text = "Calibrate")
+            }
             Button(onClick = onSetTara) {
                 Text(text = "Set tara")
             }
@@ -43,7 +49,10 @@ fun PreviewDeviceOverviewCard() {
             DeviceOverviewCard(
                 "Your Device",
                 1337.0f,
-            ) {}
+                onSetTara = {},
+                onCalibrate = {},
+                onReadSettings = {},
+            )
         }
     }
 }

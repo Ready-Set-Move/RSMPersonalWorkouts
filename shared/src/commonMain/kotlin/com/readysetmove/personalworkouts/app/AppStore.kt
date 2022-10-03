@@ -46,7 +46,7 @@ class AppStore(
 
     init {
         launch {
-//            val data = WorkoutBuilder.peter()
+//            val data = WorkoutBuilder.jonas()
 //            workoutRepository.saveWorkout(
 //                userId = data.first,
 //                workout = data.second,

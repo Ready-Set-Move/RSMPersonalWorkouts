@@ -14,4 +14,6 @@ object PreviewBluetoothService : BluetoothService {
     }
 
     override fun setTara() {}
+    override fun calibrate() {}
+    override fun readSettings() {}
 }
