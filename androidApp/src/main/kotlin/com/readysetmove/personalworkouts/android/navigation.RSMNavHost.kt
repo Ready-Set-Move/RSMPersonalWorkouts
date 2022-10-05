@@ -12,6 +12,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat.getInsetsController
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -80,9 +84,29 @@ fun RSMNavHost(navController: NavHostController) {
         }
     }
 
+    val view = LocalView.current
     LaunchedEffect(workoutSideEffects.value) {
-        if (workoutSideEffects.value is WorkoutProgressSideEffect.NewWorkoutProgressStarted) {
-            navController.navigate(WorkoutScreen.ROUTE)
+        when(workoutSideEffects.value) {
+            is WorkoutProgressSideEffect.NewWorkoutProgressStarted -> {
+                navController.navigate(WorkoutScreen.ROUTE)
+                if (!view.isInEditMode) {
+                    val currentWindow = (view.context as? Activity)?.window
+                        ?: throw Exception("Not in an activity - unable to get Window reference")
+                    getInsetsController(currentWindow, view)?.let {
+                        it.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        it.hide(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
+            is WorkoutProgressSideEffect.WorkoutFinished -> {
+                if (!view.isInEditMode) {
+                    val currentWindow = (view.context as? Activity)?.window
+                        ?: throw Exception("Not in an activity - unable to get Window reference")
+                    getInsetsController(currentWindow, view)?.let {
+                        it.show(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
         }
     }
 

@@ -6,6 +6,7 @@ import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.Exercise
 import com.readysetmove.personalworkouts.workout.Workout
 import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressAction.*
+import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressSideEffect.*
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -30,6 +31,7 @@ sealed class WorkoutProgressSideEffect : Effect {
     object NewWorkoutProgressStarted : WorkoutProgressSideEffect()
     data class WorkFinished(val workoutProgress: WorkoutProgress, val tractionGoal: Long) : WorkoutProgressSideEffect()
     data class NewSetActivated(val tractionGoal: Long) : WorkoutProgressSideEffect()
+    object WorkoutFinished : WorkoutProgressSideEffect()
 }
 
 // TODO: revert action flow: Don't listen in app store to side effects instead explicitly
@@ -54,7 +56,7 @@ class WorkoutProgressStore(
                     // TODO: workout time metrics (start + finish)
                     state.value = action.workoutStarted
                     launch {
-                        sideEffect.emit(WorkoutProgressSideEffect.NewWorkoutProgressStarted)
+                        sideEffect.emit(NewWorkoutProgressStarted)
                     }
                 }
                 is StartExercise -> {
@@ -63,7 +65,7 @@ class WorkoutProgressStore(
                 is TransitionToWaitingToStartSet -> {
                     state.value = action.waitingToStartSet.apply {
                         launch {
-                            sideEffect.emit(WorkoutProgressSideEffect.NewSetActivated(tractionGoal = tractionGoal))
+                            sideEffect.emit(NewSetActivated(tractionGoal = tractionGoal))
                         }
                     }
                 }
@@ -105,6 +107,9 @@ class WorkoutProgressStore(
                         when {
                             exerciseFinishedState.workoutProgress.atLastSetOfWorkout() -> {
                                 Napier.d("Last exercise finished.")
+                                launch {
+                                    sideEffect.emit(WorkoutFinished)
+                                }
                                 exerciseFinishedState.finishWorkout ()
                             }
                             else -> exerciseFinishedState.goToNextExercise()
@@ -120,7 +125,7 @@ class WorkoutProgressStore(
             }
         } catch (exception: Exception) {
             launch {
-                sideEffect.emit(WorkoutProgressSideEffect.Error(exception))
+                sideEffect.emit(Error(exception))
             }
         }
     }
@@ -142,7 +147,7 @@ class WorkoutProgressStore(
         }
         workTimeCountdown.invokeOnCompletion {
             launch {
-                sideEffect.emit(WorkoutProgressSideEffect.WorkFinished(
+                sideEffect.emit(WorkFinished(
                     workoutProgress = workingState.workoutProgress,
                     tractionGoal = workingState.tractionGoal,
                 ))
