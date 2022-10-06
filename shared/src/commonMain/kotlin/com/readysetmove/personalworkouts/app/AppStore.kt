@@ -6,6 +6,7 @@ import com.readysetmove.personalworkouts.state.State
 import com.readysetmove.personalworkouts.state.Store
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.Workout
+import com.readysetmove.personalworkouts.workout.WorkoutBuilder
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -46,11 +47,11 @@ class AppStore(
 
     init {
         launch {
-//            val data = WorkoutBuilder.peter()
-//            workoutRepository.saveWorkout(
-//                userId = data.first,
-//                workout = data.second,
-//            )
+            val data = WorkoutBuilder.priya()
+            workoutRepository.saveWorkout(
+                userId = data.first,
+                workout = data.second,
+            )
         }
         state.value.user?.let {
             fetchWorkoutForUser(it)

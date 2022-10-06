@@ -223,9 +223,17 @@ class WorkoutBuilder(private val id: String, val comment: String) {
 
         fun priya(): Pair<String, Workout> {
             return Pair("QetLWHUtRoZFpLufMEZxIvsoqzT2", workout(id = "2022-09-29") {
-                exercise("Bench Press", position = "Griffe @4") {
-                    warmup(5, 7, 10)
-                    set(Set(10, 20), 3)
+                exercise("Seated Rows", position = "Griffe @?") {
+                    assessmentWarmup(5, 7, 10)
+                    set(Set(10, 4), 3)
+                }
+                exercise("Leg Raises Left", position = "Fußschlaufen direkt an Wand") {
+                    assessmentWarmup(5, 5, 5)
+                    set(Set(5, 4), 3)
+                }
+                exercise("Leg Raises Right", position = "Fußschlaufen direkt an Wand") {
+                    assessmentWarmup(5, 5, 5)
+                    set(Set(5, 4), 3)
                 }
             })
         }
