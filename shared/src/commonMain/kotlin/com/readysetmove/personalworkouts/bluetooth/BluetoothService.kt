@@ -11,6 +11,9 @@ val tractionUuid: UUID = UUID.fromString("0000aa02-0000-1000-8000-00805f9b34fb")
 val sendUuid: UUID = UUID.fromString("0000aa03-0000-1000-8000-00805f9b34fb")
 
 const val setTara: Byte = 100
+const val setAutoTara: Byte = 104
+const val setScaleFactor: Byte = 110
+const val resetScaleFactor: Byte = 112
 const val calibrate: Byte = 115
 const val readAll: Byte = 117
 const val getWiFiStatus: Byte = 78

@@ -63,7 +63,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         return zeeFlow
     }
 
-    private fun writeCharacteristic(value: Byte) {
+    private fun writeCharacteristic(value: Byte, payload: Int = 1) {
         gattInUse?.let { gatt ->
             Napier.d(tag = classLogTag) { "Writing $value to data characteristic" }
 
@@ -71,11 +71,10 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
             // the app needs to be restarted here
             val service = gatt.getService(serviceUuid)
                 ?: throw ConnectionBrokenException("Service was null. Could not write characteristic: $value. App needs restart.")
-
             val characteristic = service.getCharacteristic(sendUuid)
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             characteristic.value = byteArrayOf(value,
-                (1 shr 0).toByte(),
+                payload.toByte(),
                 (1 shr 8).toByte(),
                 (1 shr 16).toByte(),
                 (1 shr 24).toByte()
@@ -97,7 +96,9 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 
     override fun calibrate() {
         Napier.d(tag = classLogTag) { "Calibrate" }
-        writeCharacteristic(calibrate)
+        writeCharacteristic(calibrate, payload = 16)
+//        writeCharacteristic(setScaleFactor, 0)
+//        writeCharacteristic(setAutoTara, payload = 1)
     }
 
     override fun readSettings() {
