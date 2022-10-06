@@ -68,6 +68,7 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
                 DeviceOverviewCard(
                     deviceName = it,
                     currentWeight = deviceState.value.traction,
+                    deviceConfiguration = deviceState.value.deviceConfiguration,
                     onReadSettings = { store.dispatch(BluetoothAction.ReadSettings) },
                     onCalibrate = { store.dispatch(BluetoothAction.Calibrate) },
                     onSetTara = { store.dispatch(BluetoothAction.SetTara) },

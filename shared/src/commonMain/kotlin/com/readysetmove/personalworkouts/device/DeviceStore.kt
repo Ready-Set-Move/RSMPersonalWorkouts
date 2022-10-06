@@ -24,7 +24,7 @@ class DeviceStore(
         launch {
             bluetoothStore.observeState().collect { bluetoothState ->
                 if (bluetoothState.activeDevice == null) return@collect
-                state.value = state.value.copy(traction = bluetoothState.traction)
+                state.value = state.value.copy(traction = bluetoothState.traction, deviceConfiguration = bluetoothState.deviceConfiguration)
             }
         }
         bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)

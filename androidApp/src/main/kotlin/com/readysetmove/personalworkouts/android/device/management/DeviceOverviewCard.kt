@@ -9,9 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.theme.AppTheme
+import com.readysetmove.personalworkouts.device.DeviceConfiguration
 
 @Composable
-fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onCalibrate: () -> Unit, onSetTara: () -> Unit, onReadSettings: () -> Unit) {
+fun DeviceOverviewCard(deviceName: String, currentWeight: Float, deviceConfiguration: DeviceConfiguration?, onCalibrate: () -> Unit, onSetTara: () -> Unit, onReadSettings: () -> Unit) {
     Card {
         Column(modifier = Modifier
             .fillMaxWidth()
@@ -28,9 +29,11 @@ fun DeviceOverviewCard(deviceName: String, currentWeight: Float, onCalibrate: ()
             Button(onClick = onCalibrate) {
                 Text(text = "Calibrate")
             }
-            Button(onClick = onSetTara) {
+            Button(onClick = onSetTara) {0
                 Text(text = "Set tara")
             }
+            Spacer(Modifier.height(AppTheme.spacings.md))
+            Text(text = "$deviceConfiguration", style = AppTheme.typography.body1)
         }
     }
 }
@@ -49,6 +52,7 @@ fun PreviewDeviceOverviewCard() {
             DeviceOverviewCard(
                 "Your Device",
                 1337.0f,
+                deviceConfiguration = DeviceConfiguration("isoX"),
                 onSetTara = {},
                 onCalibrate = {},
                 onReadSettings = {},

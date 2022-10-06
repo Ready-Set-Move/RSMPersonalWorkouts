@@ -6,7 +6,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import com.readysetmove.personalworkouts.device.DeviceConfiguration
 import io.github.aakira.napier.Napier
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -20,6 +23,7 @@ class BTLECallback(
     rootLogTag: String,
     private val onDeviceConnected: () -> Unit,
     private val onDisconnect: (cause: BluetoothService.BluetoothException) -> Unit,
+    private val onDeviceDataReceived: (deviceConfiguration: DeviceConfiguration) -> Unit,
     private val onWeightReceived: (weight: Float) -> Unit,
 ) : BluetoothGattCallback() {
     private var reconnectAttemptsLeft = maxReconnectAttempts
@@ -104,6 +108,8 @@ class BTLECallback(
                 Napier.d(tag = logTag) { "Data received" }
                 val payloadString = String(characteristic.value, StandardCharsets.UTF_8)
                 Napier.d(tag = logTag) { "BLE Payload: $payloadString" }
+                val deviceConfiguration = Json { ignoreUnknownKeys = true }.decodeFromString<DeviceConfiguration>(payloadString)
+                onDeviceDataReceived(deviceConfiguration)
             }
             else -> {
                 Napier.d(tag = logTag) { "Unknown characteristic received: ${characteristic.uuid} with ${characteristic.value}" }

@@ -132,6 +132,9 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                         },
                         onDisconnect = {
                             disconnect(it)
+                        },
+                        onDeviceDataReceived = {
+                            trySendBlocking(BluetoothService.BluetoothDeviceActions.DeviceDataChanged(deviceConfiguration = it))
                         }
                     ) { weight ->
                         trySendBlocking(BluetoothService.BluetoothDeviceActions.WeightChanged(weight))

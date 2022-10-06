@@ -1,5 +1,6 @@
 package com.readysetmove.personalworkouts.bluetooth
 
+import com.readysetmove.personalworkouts.device.DeviceConfiguration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.util.*
@@ -38,6 +39,7 @@ interface BluetoothService {
         data class Connected(val deviceName: String) : BluetoothDeviceActions()
         data class DisConnected(val cause: BluetoothException) : BluetoothDeviceActions()
         data class WeightChanged(val traction: Float) : BluetoothDeviceActions()
+        data class DeviceDataChanged(val deviceConfiguration: DeviceConfiguration) : BluetoothDeviceActions()
     }
 
     fun connectToDevice(

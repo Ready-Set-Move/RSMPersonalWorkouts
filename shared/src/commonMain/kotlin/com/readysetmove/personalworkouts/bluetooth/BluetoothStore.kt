@@ -2,6 +2,7 @@ package com.readysetmove.personalworkouts.bluetooth
 
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.BluetoothConnectPermissionNotGrantedException
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.BluetoothDisabledException
+import com.readysetmove.personalworkouts.device.DeviceConfiguration
 import com.readysetmove.personalworkouts.state.Action
 import com.readysetmove.personalworkouts.state.Effect
 import com.readysetmove.personalworkouts.state.State
@@ -21,6 +22,7 @@ data class BluetoothState(
     val activeDevice: String? = null,
     val deviceName: String? = null,
     val traction: Float = 0.0f,
+    val deviceConfiguration: DeviceConfiguration? = null
 ) : State
 
 sealed class BluetoothAction : Action {
@@ -152,6 +154,8 @@ class BluetoothStore(
                             }
                         is BluetoothService.BluetoothDeviceActions.WeightChanged ->
                             state.value = state.value.copy(traction = action.traction)
+                        is BluetoothService.BluetoothDeviceActions.DeviceDataChanged ->
+                            state.value = state.value.copy(deviceConfiguration = action.deviceConfiguration)
                         is BluetoothService.BluetoothDeviceActions.DisConnected -> {
                             state.value.activeDevice?.let {
                                 state.value = state.value.copy(activeDevice = null)
