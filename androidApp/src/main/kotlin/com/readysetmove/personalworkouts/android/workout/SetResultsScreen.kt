@@ -1,5 +1,6 @@
 package com.readysetmove.personalworkouts.android.workout
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,21 @@ fun SetResultsScreen(
     val set = workoutProgressState.workoutProgress.activeSet()
     val setIndex = workoutProgressState.workoutProgress.activeSetIndex
 
+    val proceedActions =
+        if (workoutResultsState is WorkoutResultsState.WaitingToRateSet
+            && workoutProgressState is WorkoutProgressState.SetFinished)
+        {
+            Pair(
+                workoutResultsState.rateSetAction(
+                    tractionGoal = workoutProgressState.tractionGoal,
+                    durationGoal = workoutProgressState.durationGoal,
+                    workoutProgress = workoutProgressState.workoutProgress,
+                    rating = 1,
+                ),
+                workoutProgressState.goToNextSetAction()
+            )
+        } else null
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -42,8 +58,7 @@ fun SetResultsScreen(
         },
         // TODO: this will be a real rating component later on
         floatingActionButton = {
-            if (workoutResultsState !is WorkoutResultsState.WaitingToRateSet) return@Scaffold
-            if (workoutProgressState !is WorkoutProgressState.SetFinished) return@Scaffold
+            if (proceedActions == null) return@Scaffold
             val actionText = stringResource(R.string.workout_set_results__rate)
             ExtendedFloatingActionButton(
                 icon = {
@@ -53,22 +68,23 @@ fun SetResultsScreen(
                 text = { Text(text = actionText) },
                 onClick = {
                     onProceed(
-                        workoutResultsState.rateSetAction(
-                            tractionGoal = workoutProgressState.tractionGoal,
-                            durationGoal = workoutProgressState.durationGoal,
-                            workoutProgress = workoutProgressState.workoutProgress,
-                            rating = 1,
-                        ),
-                        workoutProgressState.goToNextSetAction()
+                        proceedActions.first,
+                        proceedActions.second
                     )
                 },
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier
+        Column(
+            modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)
+            .clickable(enabled = proceedActions != null, onClick = {
+                if (proceedActions != null) {
+                    onProceed(proceedActions.first, proceedActions.second)
+                }
+            })
         ) {
             Row {
                 Column {
