@@ -15,6 +15,8 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.util.*
 
+private val json = Json { ignoreUnknownKeys = true }
+
 class BTLECallback(
     private val androidContext: Context,
     private val maxReconnectAttempts: Int,
@@ -108,7 +110,11 @@ class BTLECallback(
                 Napier.d(tag = logTag) { "Data received" }
                 val payloadString = String(characteristic.value, StandardCharsets.UTF_8)
                 Napier.d(tag = logTag) { "BLE Payload: $payloadString" }
-                val deviceConfiguration = Json { ignoreUnknownKeys = true }.decodeFromString<DeviceConfiguration>(payloadString)
+                // TODO: serialize correct types and updates:
+                // Full config: {"DevName":"Ready Set Move","PrivName":"Test1","StaSsid":"joes WLAN","StaPw":"7Fghyz49yym17QpLas","ApPw":"MyPassword","DnsName":"rsm","Average":2,"Gain128":true,"Scale":"inf","Volt":"5.11","AutoTara":true,"Tempr":"22.62","WiFiStartMode":4,"WiFiState":1}
+                // WPS response: {"Wps":"Success","StaPw":"cotty-faber-acrobat-swell-drawl-mazes-marlin-phosphate","StaSsid":"Ready Set Move Personal Training"}
+                // Partial updates like: {"WiFiState":2}
+                val deviceConfiguration = json.decodeFromString<DeviceConfiguration>(payloadString)
                 onDeviceDataReceived(deviceConfiguration)
             }
             else -> {
