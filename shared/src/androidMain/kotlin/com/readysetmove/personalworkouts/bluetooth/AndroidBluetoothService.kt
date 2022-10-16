@@ -12,7 +12,6 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.DisConnected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.*
 import io.github.aakira.napier.Napier
@@ -27,9 +26,9 @@ import kotlinx.coroutines.flow.*
 // TODO: fetch app setup from database
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
 
-class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
-    private val classLogTag = "AndroidBluetoothService"
+private const val classLogTag = "AndroidBluetoothService"
 
+class AndroidBluetoothService(private val androidContext: Context) : BluetoothService {
     private val bleAdapter by lazy {
         val bluetoothManager =
             androidContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -139,7 +138,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     ) { weight ->
                         trySendBlocking(BluetoothService.BluetoothDeviceActions.WeightChanged(weight))
                     }
-                    Log.d("$methodTag.connectionFlow", "Connecting to $address")
+                    Napier.d(tag = "$methodTag.connectionFlow") { "Connecting to $address" }
                     if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                             Manifest.permission.BLUETOOTH_CONNECT)
                         != PackageManager.PERMISSION_GRANTED
@@ -155,7 +154,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                     awaitClose {
                         currentGatt.close()
                         gattInUse = null
-                        Log.d("$methodTag.connectionFlow", "Flow closed")
+                        Napier.d(tag = "$methodTag.connectionFlow") { "Flow closed" }
                     }
                 }
             } catch (e: CancellationException) {
@@ -212,7 +211,14 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
     }
 
     companion object {
-        val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= 31) listOf(
+        val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= 33) listOf(
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
+        else if (Build.VERSION.SDK_INT >= 31) listOf(
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,
             Manifest.permission.BLUETOOTH_SCAN,
