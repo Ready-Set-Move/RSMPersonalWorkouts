@@ -23,9 +23,12 @@ data class AppState(
 sealed class AppAction: Action {
     data class SetUser(val user: User): AppAction()
     object UnsetUser: AppAction()
+    data class SaveWorkout(val data:  Pair<String, Workout>): AppAction()
 }
 
-sealed class AppSideEffect : Effect
+sealed class AppSideEffect : Effect {
+    data class WorkoutSaved(val workout: Workout): AppSideEffect()
+}
 
 // TODO: implement SettingsStore
 // TODO: implement UserStore to handle Firebase logic
@@ -45,13 +48,6 @@ class AppStore(
     private val tag = "AppStore"
 
     init {
-        launch {
-//            val data = WorkoutBuilder.jonas()
-//            workoutRepository.saveWorkout(
-//                userId = data.first,
-//                workout = data.second,
-//            )
-        }
         state.value.user?.let {
             fetchWorkoutForUser(it)
         }
@@ -83,6 +79,19 @@ class AppStore(
                 Napier.d("New user received: $action.user updating state", tag = tag)
                 fetchWorkoutForUser(action.user)
                 state.value = AppState(user = action.user)
+            }
+            // TODO: remove
+            is AppAction.SaveWorkout -> {
+                launch {
+                    workoutRepository.saveWorkout(
+                        userId = action.data.first,
+                        workout = action.data.second,
+                    )
+                }.invokeOnCompletion {
+                    launch {
+                        sideEffect.emit(AppSideEffect.WorkoutSaved(action.data.second))
+                    }
+                }
             }
         }
     }

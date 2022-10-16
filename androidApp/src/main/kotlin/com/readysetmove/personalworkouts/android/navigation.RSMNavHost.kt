@@ -116,14 +116,14 @@ fun RSMNavHost(navController: NavHostController) {
             requestActivateBTLauncher.launch(enableBtIntent)
         }
     }
-    if (!btState.value.bluetoothPermissionsGranted) {
+    if (!btState.value.bluetoothPermissionsGranted && !ProfileProvider.isDevMode) {
         GrantPermissionsScreen(btPermissions = btPermissions)
         return
     }
 
     val startDestination = when {
         (appState.value.user == null) -> LoginScreen.ROUTE
-        ProfileProvider.isDevMode -> WorkoutOverviewScreen.ROUTE
+//        ProfileProvider.isDevMode -> WorkoutOverviewScreen.ROUTE
         else -> DeviceManagementOverviewScreen.ROUTE
     }
 
