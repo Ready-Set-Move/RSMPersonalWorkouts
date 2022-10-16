@@ -11,6 +11,8 @@ import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
 import com.readysetmove.personalworkouts.device.DeviceStore
 import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.device.MockDeviceStore
+import com.readysetmove.personalworkouts.wifi.AndroidWifiService
+import com.readysetmove.personalworkouts.wifi.WifiStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
 import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
@@ -40,6 +42,17 @@ class App : Application() {
     }
 
     private val appModule = module {
+        single {
+            val wifiService = AndroidWifiService(
+                context = androidContext(),
+                ioDispatcher = Dispatchers.IO
+            )
+            WifiStore(
+                wifiService = wifiService,
+                ioDispatcher = Dispatchers.IO,
+                mainDispatcher = Dispatchers.Main,
+            )
+        }
         single {
             val bluetoothService = AndroidBluetoothService(androidContext())
             BluetoothStore(
@@ -77,6 +90,7 @@ class App : Application() {
             single<IsDeviceStore> {
                 DeviceStore(
                     bluetoothStore = get(),
+                    wifiStore = get(),
                     mainDispatcher = Dispatchers.Main,
                 )
             }

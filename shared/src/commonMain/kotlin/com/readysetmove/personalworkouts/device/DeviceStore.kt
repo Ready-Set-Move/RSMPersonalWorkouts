@@ -2,6 +2,7 @@ package com.readysetmove.personalworkouts.device
 
 import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
 import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.wifi.WifiStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,6 +12,7 @@ import kotlin.coroutines.CoroutineContext
 // TODO: add management of different devices
 class DeviceStore(
     private val bluetoothStore: BluetoothStore,
+    private val wifiStore: WifiStore,
     private val mainDispatcher: CoroutineContext,
 ):
     IsDeviceStore,
@@ -28,6 +30,7 @@ class DeviceStore(
             }
         }
         bluetoothStore.dispatch(BluetoothAction.ScanAndConnect)
+//        wifiStore.dispatch(WifiAction.ScanAndConnect)
     }
 
     override fun dispatch(action: DeviceAction) {

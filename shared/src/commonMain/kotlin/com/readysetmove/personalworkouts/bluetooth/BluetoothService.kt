@@ -1,6 +1,7 @@
 package com.readysetmove.personalworkouts.bluetooth
 
 import com.readysetmove.personalworkouts.device.DeviceConfiguration
+import com.readysetmove.personalworkouts.device.DeviceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.util.*
@@ -21,7 +22,7 @@ const val getWiFiStatus: Byte = 78
 const val getWiFiStartMode: Byte = 74
 const val getAverage: Byte = 120
 
-interface BluetoothService {
+interface BluetoothService: DeviceService<BluetoothService.BluetoothDeviceActions> {
 
     sealed class BluetoothException(message: String) : Exception(message) {
         class ScanFailedException(message: String) : BluetoothException(message)
@@ -41,13 +42,4 @@ interface BluetoothService {
         data class WeightChanged(val traction: Float) : BluetoothDeviceActions()
         data class DeviceDataChanged(val deviceConfiguration: DeviceConfiguration) : BluetoothDeviceActions()
     }
-
-    fun connectToDevice(
-        deviceName: String,
-        externalScope: CoroutineScope,
-    ): Flow<BluetoothDeviceActions>
-
-    fun setTara()
-    fun calibrate()
-    fun readSettings()
 }
