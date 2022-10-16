@@ -38,6 +38,8 @@ kotlin {
                 implementation(libs.firebase.kotlin.firestore)
                 // Serialization
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.3")
+                // ktor
+                implementation(libs.ktor.network)
             }
         }
         val commonTest by getting {
@@ -71,11 +73,11 @@ kotlin {
 }
 
 android {
-    compileSdk = 32
+    compileSdk = 33
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 24
-        targetSdk = 32
+        minSdk = 29
+        targetSdk = 33
     }
     namespace = "com.readysetmove.personalworkouts"
 }
