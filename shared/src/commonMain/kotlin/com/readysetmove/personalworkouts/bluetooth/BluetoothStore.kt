@@ -90,10 +90,21 @@ class BluetoothStore(
             }
             is BluetoothAction.ScanAndConnect -> {
                 val deviceName = state.value.deviceName
+                val btEnabled = state.value.bluetoothEnabled
+                val permissionsGranted = state.value.bluetoothPermissionsGranted
+                Napier.d(tag = classLogTag) {
+                    "ScanAndConnect device: $deviceName. With enabled=$btEnabled | permissions=$permissionsGranted"
+                }
                 when {
-                    !state.value.bluetoothEnabled || !state.value.bluetoothPermissionsGranted -> {
+                    // TODO: why is nothing logged here?
+                    !btEnabled -> {
                         // TODO: side effect to inform consumer
-                        Napier.d(tag = classLogTag) { "Bluetooth not enabled or permissions missing" }
+                        Napier.d(tag = classLogTag) { "Bluetooth not enabled." }
+                        return
+                    }
+                    !permissionsGranted -> {
+                        // TODO: side effect to inform consumer
+                        Napier.d(tag = classLogTag) { "Bluetooth permissions missing." }
                         return
                     }
                     state.value.activeDevice != null || connectJob != null -> {
