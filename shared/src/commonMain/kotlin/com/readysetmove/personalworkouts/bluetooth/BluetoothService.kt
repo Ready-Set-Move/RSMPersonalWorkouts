@@ -22,7 +22,11 @@ const val getWiFiStatus: Byte = 78
 const val getWiFiStartMode: Byte = 74
 const val getAverage: Byte = 120
 
-interface BluetoothService: DeviceService<BluetoothService.BluetoothDeviceActions> {
+interface BluetoothService: DeviceService {
+    fun connectToDevice(
+        deviceName: String,
+        externalScope: CoroutineScope,
+    ): Flow<BluetoothDeviceActions>
 
     sealed class BluetoothException(message: String) : Exception(message) {
         class ScanFailedException(message: String) : BluetoothException(message)

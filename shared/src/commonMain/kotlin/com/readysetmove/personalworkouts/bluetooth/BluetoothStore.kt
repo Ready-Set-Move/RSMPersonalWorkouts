@@ -95,6 +95,7 @@ class BluetoothStore(
                 Napier.d(tag = classLogTag) {
                     "ScanAndConnect device: $deviceName. With enabled=$btEnabled | permissions=$permissionsGranted"
                 }
+                return // TODO: remove
                 when {
                     // TODO: why is nothing logged here?
                     !btEnabled -> {

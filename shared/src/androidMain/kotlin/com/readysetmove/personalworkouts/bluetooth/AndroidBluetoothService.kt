@@ -109,11 +109,8 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
     private fun startConnectCallback(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
         val methodTag = "$classLogTag.startConnectCallback"
         return callbackFlow {
-            if (!getBluetoothEnabled()) {
-                trySendBlocking(DisConnected(BluetoothDisabledException("Bluetooth needs to be enabled to start scanning")))
-                close()
-                return@callbackFlow
-            }
+            if (!getBluetoothEnabled())
+                return@callbackFlow disconnect(BluetoothDisabledException("Bluetooth needs to be enabled to start scanning"))
 
             try {
                 val device = scanForDevice(deviceName).single()

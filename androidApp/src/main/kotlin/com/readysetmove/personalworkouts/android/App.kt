@@ -12,6 +12,8 @@ import com.readysetmove.personalworkouts.device.DeviceStore
 import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.device.MockDeviceStore
 import com.readysetmove.personalworkouts.wifi.AndroidWifiService
+import com.readysetmove.personalworkouts.wifi.WifiService
+import com.readysetmove.personalworkouts.wifi.WifiState
 import com.readysetmove.personalworkouts.wifi.WifiStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
@@ -43,12 +45,16 @@ class App : Application() {
 
     private val appModule = module {
         single {
-            val wifiService = AndroidWifiService(
-                context = androidContext(),
-                ioDispatcher = Dispatchers.IO
-            )
+            val wifiService = AndroidWifiService(context = androidContext())
             WifiStore(
                 wifiService = wifiService,
+                initialState = WifiState(
+                    connection = WifiService.WifiConnectionType.ConnectToExternalWLAN(
+                        deviceDnsName = "isoX-joes"
+                    ),
+                    wifiEnabled = wifiService.getWifiEnabled(),
+                    wifiPermissionsGranted = true
+                ),
                 ioDispatcher = Dispatchers.IO,
                 mainDispatcher = Dispatchers.Main,
             )
@@ -58,7 +64,7 @@ class App : Application() {
             BluetoothStore(
                 bluetoothService = bluetoothService,
                 initialState = BluetoothState(
-                    deviceName = "Ready Set Move Test1",
+                    deviceName = "isoX",
 //                    deviceName = "Roberts Waage",
                     bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
                 ioDispatcher = Dispatchers.IO,

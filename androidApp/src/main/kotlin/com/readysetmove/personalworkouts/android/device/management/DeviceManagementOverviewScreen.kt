@@ -71,16 +71,14 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
             .padding(innerPadding)
             .padding(AppTheme.spacings.md)
         ) {
-            state.value.activeDevice?.let {
-                DeviceOverviewCard(
-                    deviceName = it,
-                    currentWeight = deviceState.value.traction,
-                    deviceConfiguration = deviceState.value.deviceConfiguration,
-                    onReadSettings = { store.dispatch(BluetoothAction.ReadSettings) },
-                    onCalibrate = { store.dispatch(BluetoothAction.Calibrate) },
-                    onSetTara = { store.dispatch(BluetoothAction.SetTara) },
-                )
-            }
+            DeviceOverviewCard(
+                deviceName = state.value.deviceName ?: "wifi",
+                currentWeight = deviceState.value.traction,
+                deviceConfiguration = deviceState.value.deviceConfiguration,
+                onReadSettings = { store.dispatch(BluetoothAction.ReadSettings) },
+                onCalibrate = { store.dispatch(BluetoothAction.Calibrate) },
+                onSetTara = { store.dispatch(BluetoothAction.SetTara) },
+            )
             if (state.value.scanning) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))
                 CircularProgressIndicator()
