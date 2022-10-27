@@ -1,7 +1,9 @@
 package com.readysetmove.personalworkouts.wifi
 
-import com.readysetmove.personalworkouts.device.DeviceConfiguration
+import com.readysetmove.personalworkouts.device.ConnectionConfiguration
+import com.readysetmove.personalworkouts.device.DeviceChange
 import com.readysetmove.personalworkouts.device.DeviceService
+import com.readysetmove.personalworkouts.device.IsDisconnectCause
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
@@ -9,14 +11,9 @@ const val directAPHostIP = "192.168.4.1"
 
 interface WifiService: DeviceService {
     fun connectToDevice(
-        wifiConnectionType: WifiConnectionType,
+        wifiConfiguration: ConnectionConfiguration.WifiConnection,
         externalScope: CoroutineScope,
-    ): Flow<WifiDeviceActions>
-
-    sealed class WifiConnectionType {
-        data class DirectConnection(val ssid: String = "isoX", val passphrase: String?): WifiConnectionType()
-        data class ConnectToExternalWLAN(val deviceDnsName: String): WifiConnectionType()
-    }
+    ): Flow<DeviceChange>
 
     sealed class WifiNetworkExceptions {
         data class ResolvingDNSNameFailed(val message: String): WifiNetworkExceptions()
@@ -29,19 +26,12 @@ interface WifiService: DeviceService {
         data class DisConnected(val cause: WifiNetworkExceptions) : WifiNetworkActions()
     }
 
-    sealed class WifiExceptions {
+    sealed class WifiExceptions: IsDisconnectCause {
         data class WifiDisabledException(val message: String): WifiExceptions()
         data class TCPConnectionFailed(val message: String): WifiExceptions()
         data class UDPConnectionFailed(val message: String): WifiExceptions()
         data class ConnectingToNetworkFailed(val message: String): WifiExceptions()
         object ConnectingToDeviceAPFailed: WifiExceptions()
         object NetworkDisconnected: WifiExceptions()
-    }
-
-    sealed class WifiDeviceActions {
-        data class Connected(val connectedHost: String) : WifiDeviceActions()
-        data class DisConnected(val cause: WifiExceptions) : WifiDeviceActions()
-        data class WeightChanged(val traction: Float) : WifiDeviceActions()
-        data class DeviceDataChanged(val deviceConfiguration: DeviceConfiguration) : WifiDeviceActions()
     }
 }

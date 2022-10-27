@@ -6,15 +6,8 @@ import com.readysetmove.personalworkouts.IsTimestampProvider
 import com.readysetmove.personalworkouts.app.AppState
 import com.readysetmove.personalworkouts.app.AppStore
 import com.readysetmove.personalworkouts.bluetooth.AndroidBluetoothService
-import com.readysetmove.personalworkouts.bluetooth.BluetoothState
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
-import com.readysetmove.personalworkouts.device.DeviceStore
-import com.readysetmove.personalworkouts.device.IsDeviceStore
-import com.readysetmove.personalworkouts.device.MockDeviceStore
+import com.readysetmove.personalworkouts.device.*
 import com.readysetmove.personalworkouts.wifi.AndroidWifiService
-import com.readysetmove.personalworkouts.wifi.WifiService
-import com.readysetmove.personalworkouts.wifi.WifiState
-import com.readysetmove.personalworkouts.wifi.WifiStore
 import com.readysetmove.personalworkouts.workout.IsWorkoutRepository
 import com.readysetmove.personalworkouts.workout.WorkoutRepository
 import com.readysetmove.personalworkouts.workout.progress.WorkoutProgressStore
@@ -44,33 +37,6 @@ class App : Application() {
     }
 
     private val appModule = module {
-        single {
-            val wifiService = AndroidWifiService(context = androidContext())
-            WifiStore(
-                wifiService = wifiService,
-                initialState = WifiState(
-                    connection = WifiService.WifiConnectionType.ConnectToExternalWLAN(
-                        deviceDnsName = "isoX-joes"
-                    ),
-                    wifiEnabled = wifiService.getWifiEnabled(),
-                    wifiPermissionsGranted = true
-                ),
-                ioDispatcher = Dispatchers.IO,
-                mainDispatcher = Dispatchers.Main,
-            )
-        }
-        single {
-            val bluetoothService = AndroidBluetoothService(androidContext())
-            BluetoothStore(
-                bluetoothService = bluetoothService,
-                initialState = BluetoothState(
-                    deviceName = "isoX",
-//                    deviceName = "Roberts Waage",
-                    bluetoothEnabled = bluetoothService.getBluetoothEnabled()),
-                ioDispatcher = Dispatchers.IO,
-                mainDispatcher = Dispatchers.Main,
-            )
-        }
         single<IsTimestampProvider> {
             object : IsTimestampProvider {
                 override fun getTimeMillis(): Long {
@@ -94,10 +60,29 @@ class App : Application() {
             }
         } else {
             single<IsDeviceStore> {
+                val wifiService = AndroidWifiService(context = androidContext())
+                val bluetoothService = AndroidBluetoothService(androidContext())
+
+                val initialState = DeviceState(
+//                    connectionConfiguration = ConnectionConfiguration.WifiConnection(
+//                        configuration = WifiConfiguration.WifiDirectAPConnection(
+//                            ssid = "isoX"
+//                        )
+//                    ),
+//                    connectionConfiguration = ConnectionConfiguration.BLEConnection(deviceName = "isoX"),
+                    connectionConfiguration = ConnectionConfiguration.WifiConnection(
+                        configuration = WifiConfiguration.WifiExternalWLANConnection(
+                            deviceDnsName = "isoX-joes"
+                        )
+                    ),
+                )
+
                 DeviceStore(
-                    bluetoothStore = get(),
-                    wifiStore = get(),
+                    wifiService = wifiService,
+                    bluetoothService = bluetoothService,
                     mainDispatcher = Dispatchers.Main,
+                    ioDispatcher = Dispatchers.IO,
+                    initialState = initialState
                 )
             }
         }

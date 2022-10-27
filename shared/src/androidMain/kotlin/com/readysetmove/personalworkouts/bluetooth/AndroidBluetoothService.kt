@@ -12,8 +12,10 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothDeviceActions.DisConnected
 import com.readysetmove.personalworkouts.bluetooth.BluetoothService.BluetoothException.*
+import com.readysetmove.personalworkouts.device.ConnectionConfiguration
+import com.readysetmove.personalworkouts.device.DeviceChange
+import com.readysetmove.personalworkouts.device.IsDisconnectCause
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -44,19 +46,19 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         return bleAdapter.isEnabled
     }
 
-    private var sharedFlow: SharedFlow<BluetoothService.BluetoothDeviceActions>? = null
+    private var sharedFlow: SharedFlow<DeviceChange>? = null
     private var gattInUse: BluetoothGatt? = null
 
     override fun connectToDevice(
-        deviceName: String,
-        externalScope: CoroutineScope,
-    ): SharedFlow<BluetoothService.BluetoothDeviceActions> {
+        connectionConfiguration: ConnectionConfiguration.BLEConnection,
+        externalScope: CoroutineScope
+    ): Flow<DeviceChange> {
         // did we already start the flow? then return it for subscribers
         var zeeFlow = sharedFlow
         if (zeeFlow != null) return zeeFlow
 
         //... otherwise start it to scan, connect and launch the monster callback to listen to the BTLE device
-        zeeFlow = startConnectCallback(deviceName).shareIn(externalScope,
+        zeeFlow = startConnectCallback(connectionConfiguration).shareIn(externalScope,
             SharingStarted.WhileSubscribed())
         sharedFlow = zeeFlow
         return zeeFlow
@@ -73,7 +75,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
             val characteristic = service.getCharacteristic(sendUuid)
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             characteristic.value = byteArrayOf(value,
-                payload.toByte(),
+                payload.toString().toByte(),
                 (1 shr 8).toByte(),
                 (1 shr 16).toByte(),
                 (1 shr 24).toByte()
@@ -106,34 +108,34 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 //        writeCharacteristic(getWiFiStatus)
     }
 
-    private fun startConnectCallback(deviceName: String): Flow<BluetoothService.BluetoothDeviceActions> {
+    private fun startConnectCallback(connectionConfiguration: ConnectionConfiguration.BLEConnection): Flow<DeviceChange> {
         val methodTag = "$classLogTag.startConnectCallback"
         return callbackFlow {
             if (!getBluetoothEnabled())
                 return@callbackFlow disconnect(BluetoothDisabledException("Bluetooth needs to be enabled to start scanning"))
 
             try {
-                val device = scanForDevice(deviceName).single()
+                val device = scanForDevice(connectionConfiguration.deviceName).single()
 
                 with(device) {
                     val connectionStateChangedCallback = BTLECallback(
                         androidContext = androidContext,
                         maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
                         device = device,
-                        deviceName = deviceName,
+                        deviceName = connectionConfiguration.deviceName,
                         rootLogTag = methodTag,
                         onDeviceConnected = {
-                            trySendBlocking(BluetoothService.BluetoothDeviceActions.Connected(
-                                deviceName = deviceName))
+                            trySendBlocking(DeviceChange.Connected(
+                                connectionConfiguration = connectionConfiguration))
                         },
                         onDisconnect = {
                             disconnect(it)
                         },
                         onDeviceDataReceived = {
-                            trySendBlocking(BluetoothService.BluetoothDeviceActions.DeviceDataChanged(deviceConfiguration = it))
+                            trySendBlocking(DeviceChange.DeviceDataChanged(deviceConfiguration = it))
                         }
                     ) { weight ->
-                        trySendBlocking(BluetoothService.BluetoothDeviceActions.WeightChanged(weight))
+                        trySendBlocking(DeviceChange.WeightChanged(weight))
                     }
                     Napier.d(tag = "$methodTag.connectionFlow") { "Connecting to $address" }
                     if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
@@ -166,10 +168,10 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         }
     }
 
-    private fun ProducerScope<BluetoothService.BluetoothDeviceActions>.disconnect(
-        cause: BluetoothService.BluetoothException,
+    private fun ProducerScope<DeviceChange>.disconnect(
+        cause: IsDisconnectCause,
     ) {
-        trySendBlocking(DisConnected(cause))
+        trySendBlocking(DeviceChange.Disconnected(cause))
         close()
         sharedFlow = null
     }

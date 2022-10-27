@@ -2,8 +2,12 @@ package com.readysetmove.personalworkouts.wifi
 
 import android.content.Context
 import android.net.wifi.WifiManager
-import com.readysetmove.personalworkouts.wifi.WifiService.*
+import com.readysetmove.personalworkouts.device.ConnectionConfiguration
+import com.readysetmove.personalworkouts.device.DeviceChange
+import com.readysetmove.personalworkouts.device.IsDisconnectCause
 import com.readysetmove.personalworkouts.wifi.WifiService.WifiExceptions.*
+import com.readysetmove.personalworkouts.wifi.WifiService.WifiNetworkActions
+import com.readysetmove.personalworkouts.wifi.WifiService.WifiNetworkExceptions
 import io.github.aakira.napier.Napier
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -28,16 +32,16 @@ class AndroidWifiService(
     private val wifiManager by lazy {
         context.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
-    private var sharedFlow: SharedFlow<WifiDeviceActions>? = null
+    private var sharedFlow: SharedFlow<DeviceChange>? = null
 
     fun getWifiEnabled(): Boolean {
         return wifiManager.isWifiEnabled
     }
 
     override fun connectToDevice(
-        wifiConnectionType: WifiConnectionType,
-        externalScope: CoroutineScope,
-    ): Flow<WifiDeviceActions> {
+        wifiConfiguration: ConnectionConfiguration.WifiConnection,
+        externalScope: CoroutineScope
+    ): Flow<DeviceChange> {
         val methodTag = "${classLogTag}.startConnectCallback"
         Napier.d(tag = methodTag) { "Looking for running connect process" }
         // did we already start the flow? then return it for subscribers
@@ -46,13 +50,13 @@ class AndroidWifiService(
 
         Napier.d(tag = methodTag) { "Starting connect process" }
         //... otherwise start it to scan, connect and launch the callback to listen to WiFi changes
-        zeeFlow = startConnectCallback(wifiConnectionType).shareIn(externalScope,
+        zeeFlow = startConnectCallback(wifiConfiguration).shareIn(externalScope,
             SharingStarted.WhileSubscribed())
         sharedFlow = zeeFlow
         return zeeFlow
     }
 
-    private fun startConnectCallback(wifiConnectionType: WifiConnectionType): Flow<WifiDeviceActions> {
+    private fun startConnectCallback(wifiConfiguration: ConnectionConfiguration.WifiConnection): Flow<DeviceChange> {
         val methodTag = "$classLogTag.startConnectCallback"
         return callbackFlow {
             Napier.d(tag = methodTag) { "Starting callback flow" }
@@ -64,7 +68,7 @@ class AndroidWifiService(
 
             WifiConnection(
                 context = context,
-                wifiConnectionType = wifiConnectionType
+                wifiConfiguration = wifiConfiguration.configuration
             ).create().collect {
                 when(it) {
                     is WifiNetworkActions.DisConnected -> {
@@ -98,7 +102,7 @@ class AndroidWifiService(
                                     val traction = ByteBuffer.wrap(packet.data).order(ByteOrder.LITTLE_ENDIAN)
                                         .float
                                     trySendBlocking(
-                                        WifiDeviceActions.WeightChanged(traction = traction)
+                                        DeviceChange.WeightChanged(traction = traction)
                                     )
                                 }
                             }
@@ -125,7 +129,7 @@ class AndroidWifiService(
 //                                    }
 
                                     trySendBlocking(
-                                        WifiDeviceActions.Connected(connectedHost = it.resolvedHost)
+                                        DeviceChange.Connected(connectionConfiguration = wifiConfiguration)
                                     )
                                 }
 
@@ -166,15 +170,15 @@ class AndroidWifiService(
         }
     }
 
-    private fun ProducerScope<WifiDeviceActions>.disconnect(
-        cause: WifiExceptions,
+    private fun ProducerScope<DeviceChange>.disconnect(
+        cause: IsDisconnectCause,
     ) {
-        trySendBlocking(WifiDeviceActions.DisConnected(cause))
+        trySendBlocking(DeviceChange.Disconnected(cause))
         close()
         sharedFlow = null
     }
 
-    suspend fun connectTCPSocket(host: String): Flow<WifiService.WifiDeviceActions> {
+    suspend fun connectTCPSocket(host: String): Flow<DeviceChange> {
         val methodTag = "$classLogTag.connectTCPSocket"
         val selectorManager = SelectorManager(Dispatchers.IO)
         return callbackFlow {

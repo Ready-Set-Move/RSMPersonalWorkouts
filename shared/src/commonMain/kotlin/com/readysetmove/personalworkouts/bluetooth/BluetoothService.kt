@@ -1,7 +1,6 @@
 package com.readysetmove.personalworkouts.bluetooth
 
-import com.readysetmove.personalworkouts.device.DeviceConfiguration
-import com.readysetmove.personalworkouts.device.DeviceService
+import com.readysetmove.personalworkouts.device.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import java.util.*
@@ -24,26 +23,16 @@ const val getAverage: Byte = 120
 
 interface BluetoothService: DeviceService {
     fun connectToDevice(
-        deviceName: String,
+        connectionConfiguration: ConnectionConfiguration.BLEConnection,
         externalScope: CoroutineScope,
-    ): Flow<BluetoothDeviceActions>
+    ): Flow<DeviceChange>
 
-    sealed class BluetoothException(message: String) : Exception(message) {
+    sealed class BluetoothException(message: String) : Exception(message), IsDisconnectCause {
         class ScanFailedException(message: String) : BluetoothException(message)
         class ConnectFailedException(message: String) : BluetoothException(message)
         class BluetoothDisabledException(message: String) : BluetoothException(message)
         class BluetoothPermissionNotGrantedException(message: String) : BluetoothException(message)
-        class BluetoothConnectPermissionNotGrantedException(message: String) :
-            BluetoothException(message)
-
         class NotConnectedException(message: String) : BluetoothException(message)
         class ConnectionBrokenException(message: String) : BluetoothException(message)
-    }
-
-    sealed class BluetoothDeviceActions {
-        data class Connected(val deviceName: String) : BluetoothDeviceActions()
-        data class DisConnected(val cause: BluetoothException) : BluetoothDeviceActions()
-        data class WeightChanged(val traction: Float) : BluetoothDeviceActions()
-        data class DeviceDataChanged(val deviceConfiguration: DeviceConfiguration) : BluetoothDeviceActions()
     }
 }

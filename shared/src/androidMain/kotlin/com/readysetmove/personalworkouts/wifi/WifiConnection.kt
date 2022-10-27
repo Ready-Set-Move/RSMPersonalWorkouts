@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.wifi.WifiNetworkSpecifier
+import com.readysetmove.personalworkouts.device.WifiConfiguration
 import com.readysetmove.personalworkouts.wifi.WifiService.WifiNetworkActions.Connected
 import com.readysetmove.personalworkouts.wifi.WifiService.WifiNetworkActions.DisConnected
 import io.github.aakira.napier.Napier
@@ -20,14 +21,14 @@ import kotlinx.coroutines.launch
 
 private const val classLogTag = "WifiConnection"
 
-class WifiConnection(context: Context, private val wifiConnectionType: WifiService.WifiConnectionType):
+class WifiConnection(context: Context, private val wifiConfiguration: WifiConfiguration):
     CoroutineScope by CoroutineScope(Dispatchers.IO)
 {
     private val connectivityManager by lazy {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
 
-    private fun connectExternalWLAN(externalWLANConnection: WifiService.WifiConnectionType.ConnectToExternalWLAN): Flow<WifiService.WifiNetworkActions> {
+    private fun connectExternalWLAN(externalWLANConnection: WifiConfiguration.WifiExternalWLANConnection): Flow<WifiService.WifiNetworkActions> {
         return callbackFlow {
             val methodTag = "${classLogTag}.connectExternalWLAN"
             val connectJob = launch(Dispatchers.IO) {
@@ -48,7 +49,7 @@ class WifiConnection(context: Context, private val wifiConnectionType: WifiServi
         }
     }
 
-    private fun directConnectToAP(directConnection: WifiService.WifiConnectionType.DirectConnection): Flow<WifiService.WifiNetworkActions> {
+    private fun directConnectToAP(directConnection: WifiConfiguration.WifiDirectAPConnection): Flow<WifiService.WifiNetworkActions> {
         return callbackFlow {
             val methodTag = "${classLogTag}.directConnectToAP"
             val networkSpecifier = WifiNetworkSpecifier.Builder().setSsid(directConnection.ssid)
@@ -87,9 +88,9 @@ class WifiConnection(context: Context, private val wifiConnectionType: WifiServi
     }
 
     fun create(): Flow<WifiService.WifiNetworkActions> {
-        return when(wifiConnectionType) {
-            is WifiService.WifiConnectionType.DirectConnection -> directConnectToAP(wifiConnectionType)
-            is WifiService.WifiConnectionType.ConnectToExternalWLAN -> connectExternalWLAN(wifiConnectionType)
+        return when(wifiConfiguration) {
+            is WifiConfiguration.WifiDirectAPConnection -> directConnectToAP(wifiConfiguration)
+            is WifiConfiguration.WifiExternalWLANConnection -> connectExternalWLAN(wifiConfiguration)
         }
     }
 }

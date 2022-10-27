@@ -2,6 +2,8 @@ package com.readysetmove.personalworkouts.device
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -9,6 +11,9 @@ import kotlin.coroutines.CoroutineContext
 
 class MockDeviceStore(private val mainDispatcher: CoroutineContext): IsDeviceStore, CoroutineScope by CoroutineScope(mainDispatcher) {
     private val state = MutableStateFlow(DeviceState())
+
+    private val sideEffect = MutableSharedFlow<DeviceSideEffect>()
+    override fun observeSideEffect(): Flow<DeviceSideEffect> = sideEffect
 
     override fun observeState(): StateFlow<DeviceState> = state
 

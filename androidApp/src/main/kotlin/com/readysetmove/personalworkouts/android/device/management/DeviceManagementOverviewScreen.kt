@@ -20,17 +20,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.readysetmove.personalworkouts.android.ProfileProvider
 import com.readysetmove.personalworkouts.android.R
-import com.readysetmove.personalworkouts.android.preview.PreviewBluetoothService
 import com.readysetmove.personalworkouts.android.theme.AppTheme
 import com.readysetmove.personalworkouts.app.AppAction
 import com.readysetmove.personalworkouts.app.AppSideEffect
 import com.readysetmove.personalworkouts.app.AppStore
-import com.readysetmove.personalworkouts.bluetooth.BluetoothAction
-import com.readysetmove.personalworkouts.bluetooth.BluetoothState
-import com.readysetmove.personalworkouts.bluetooth.BluetoothStore
+import com.readysetmove.personalworkouts.device.ConnectionState
+import com.readysetmove.personalworkouts.device.DeviceAction
 import com.readysetmove.personalworkouts.device.IsDeviceStore
 import com.readysetmove.personalworkouts.workout.WorkoutBuilder
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterIsInstance
 import org.koin.androidx.compose.get
 
@@ -40,17 +37,18 @@ object DeviceManagementOverviewScreen {
 }
 
 @Composable
-fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: IsDeviceStore = get(), appStore: AppStore = get(), onNavigateBack: () -> Unit) {
+fun DeviceManagementOverviewScreen(deviceStore: IsDeviceStore = get(), appStore: AppStore = get(), onNavigateBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val title = stringResource(R.string.device_management_overview__screen_title)
-    val state = store.observeState().collectAsState()
-    DisposableEffect(state.value.bluetoothEnabled) {
-        if (state.value.bluetoothEnabled) {
-            store.dispatch(BluetoothAction.ScanAndConnect)
-        }
-        onDispose { store.dispatch(BluetoothAction.StopScanning) }
-    }
     val deviceState = deviceStore.observeState().collectAsState()
+    DisposableEffect(deviceState.value.connectionConfiguration) {
+        if (deviceState.value.connectionConfiguration != null) {
+            deviceStore.dispatch(DeviceAction.ScanAndConnect)
+        }
+        onDispose {
+            deviceStore.dispatch(DeviceAction.ResetConnection)
+        }
+    }
     val workoutSaved = appStore.observeSideEffect().filterIsInstance<AppSideEffect.WorkoutSaved>().collectAsState(initial = null)
     Scaffold(
         topBar = {
@@ -72,18 +70,18 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
             .padding(AppTheme.spacings.md)
         ) {
             DeviceOverviewCard(
-                deviceName = state.value.deviceName ?: "wifi",
+                deviceName = deviceState.value.deviceConfiguration?.name ?: "Not connected",
                 currentWeight = deviceState.value.traction,
                 deviceConfiguration = deviceState.value.deviceConfiguration,
-                onReadSettings = { store.dispatch(BluetoothAction.ReadSettings) },
-                onCalibrate = { store.dispatch(BluetoothAction.Calibrate) },
-                onSetTara = { store.dispatch(BluetoothAction.SetTara) },
+                onReadSettings = { deviceStore.dispatch(DeviceAction.ReadSettings) },
+                onCalibrate = { deviceStore.dispatch(DeviceAction.Calibrate) },
+                onSetTara = { deviceStore.dispatch(DeviceAction.SetTara) },
             )
-            if (state.value.scanning) {
+            if (deviceState.value.connectionState == ConnectionState.CONNECTING) {
                 Spacer(modifier = Modifier.height(AppTheme.spacings.md))
                 CircularProgressIndicator()
-            } else if (state.value.activeDevice == null) {
-                Button(onClick = { store.dispatch(BluetoothAction.ScanAndConnect) }) {
+            } else if (deviceState.value.deviceConfiguration == null) {
+                Button(onClick = { deviceStore.dispatch(DeviceAction.ScanAndConnect) }) {
                     Text(text = "Connect")
                 }
             }
@@ -126,13 +124,6 @@ fun DeviceManagementOverviewScreen(store: BluetoothStore = get(), deviceStore: I
 @Composable
 fun PreviewDeviceManagementOverviewScreen() {
     AppTheme {
-        DeviceManagementOverviewScreen(
-            store = BluetoothStore(
-                bluetoothService = PreviewBluetoothService,
-                initialState = BluetoothState(bluetoothEnabled = true),
-                ioDispatcher = Dispatchers.IO,
-                mainDispatcher = Dispatchers.Main,
-            )
-        ) {}
+        DeviceManagementOverviewScreen {}
     }
 }
