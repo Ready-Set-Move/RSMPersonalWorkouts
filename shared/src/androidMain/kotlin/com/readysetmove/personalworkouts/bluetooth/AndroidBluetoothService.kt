@@ -74,12 +74,9 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                 ?: throw ConnectionBrokenException("Service was null. Could not write characteristic: $value. App needs restart.")
             val characteristic = service.getCharacteristic(sendUuid)
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            characteristic.value = byteArrayOf(value,
-                payload.toString().toByte(),
-                (1 shr 8).toByte(),
-                (1 shr 16).toByte(),
-                (1 shr 24).toByte()
-            )
+            characteristic.value =
+                byteArrayOf(value)
+                    .plus(payload.toString().toByteArray())
             if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                     Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
