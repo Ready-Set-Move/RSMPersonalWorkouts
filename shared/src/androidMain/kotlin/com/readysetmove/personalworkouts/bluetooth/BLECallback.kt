@@ -17,7 +17,7 @@ import java.util.*
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class BTLECallback(
+class BLECallback(
     private val androidContext: Context,
     private val maxReconnectAttempts: Int,
     private val device: BluetoothDevice,
@@ -210,7 +210,7 @@ class BTLECallback(
             reconnectAttemptsLeft--
             connectGatt(androidContext,
                 false,
-                this@BTLECallback,
+                this@BLECallback,
                 BluetoothDevice.TRANSPORT_LE)
         }
     }

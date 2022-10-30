@@ -115,7 +115,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                 val device = scanForDevice(connectionConfiguration.deviceName).single()
 
                 with(device) {
-                    val connectionStateChangedCallback = BTLECallback(
+                    val connectionStateChangedCallback = BLECallback(
                         androidContext = androidContext,
                         maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
                         device = device,
@@ -148,6 +148,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
                         BluetoothDevice.TRANSPORT_LE)
                     gattInUse = currentGatt
                     awaitClose {
+                        currentGatt.disconnect()
                         currentGatt.close()
                         gattInUse = null
                         Napier.d(tag = "$methodTag.connectionFlow") { "Flow closed" }
