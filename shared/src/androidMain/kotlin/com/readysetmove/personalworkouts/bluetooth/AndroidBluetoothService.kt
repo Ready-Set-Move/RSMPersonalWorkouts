@@ -18,12 +18,13 @@ import com.readysetmove.personalworkouts.device.DeviceChange
 import com.readysetmove.personalworkouts.device.IsDisconnectCause
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.single
 
 // TODO: fetch app setup from database
 private const val MAX_RECONNECT_ATTEMPTS: Int = 10
@@ -46,25 +47,17 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
         return bleAdapter.isEnabled
     }
 
-    private var sharedFlow: SharedFlow<DeviceChange>? = null
     private var gattInUse: BluetoothGatt? = null
+    private var currentConnectJob: ProducerScope<DeviceChange>? = null
 
     override fun connectToDevice(
         connectionConfiguration: ConnectionConfiguration.BLEConnection,
-        externalScope: CoroutineScope
     ): Flow<DeviceChange> {
-        // did we already start the flow? then return it for subscribers
-        var zeeFlow = sharedFlow
-        if (zeeFlow != null) return zeeFlow
-
-        //... otherwise start it to scan, connect and launch the monster callback to listen to the BTLE device
-        zeeFlow = startConnectCallback(connectionConfiguration).shareIn(externalScope,
-            SharingStarted.WhileSubscribed())
-        sharedFlow = zeeFlow
-        return zeeFlow
+        // TODO: remove layer
+        return startConnectCallback(connectionConfiguration)
     }
 
-    private fun writeCharacteristic(value: Byte, payload: Int = 1) {
+    private fun writeCharacteristic(value: Byte, payload: String = "1") {
         gattInUse?.let { gatt ->
             Napier.d(tag = classLogTag) { "Writing $value to data characteristic" }
 
@@ -76,7 +69,7 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             characteristic.value =
                 byteArrayOf(value)
-                    .plus(payload.toString().toByteArray())
+                    .plus(payload.toByteArray())
             if (Build.VERSION.SDK_INT >= 31 && androidContext.checkSelfPermission(
                     Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED
@@ -94,7 +87,11 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 
     override fun calibrate() {
         Napier.d(tag = classLogTag) { "Calibrate" }
-        writeCharacteristic(calibrate, payload = 16)
+//        writeCharacteristic(calibrate, payload = "16")
+        writeCharacteristic(setAPPassword, payload = "pass") // AP
+//        writeCharacteristic(setWiFiStartMode, payload = "a") // AP
+//        writeCharacteristic(setWiFiStartMode, payload = "h") // Hardware Switch
+//        writeCharacteristic(setWiFiStartMode, payload = "s") // WLAN
 //        writeCharacteristic(setScaleFactor, 0)
 //        writeCharacteristic(setAutoTara, payload = 1)
     }
@@ -105,9 +102,15 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
 //        writeCharacteristic(getWiFiStatus)
     }
 
+    override fun disconnect() {
+        currentConnectJob?.close()
+        currentConnectJob = null
+    }
+
     private fun startConnectCallback(connectionConfiguration: ConnectionConfiguration.BLEConnection): Flow<DeviceChange> {
         val methodTag = "$classLogTag.startConnectCallback"
         return callbackFlow {
+            currentConnectJob = this
             if (!getBluetoothEnabled())
                 return@callbackFlow disconnect(BluetoothDisabledException("Bluetooth needs to be enabled to start scanning"))
 
@@ -171,7 +174,6 @@ class AndroidBluetoothService(private val androidContext: Context) : BluetoothSe
     ) {
         trySendBlocking(DeviceChange.Disconnected(cause))
         close()
-        sharedFlow = null
     }
 
     private fun scanForDevice(deviceName: String): Flow<BluetoothDevice> {

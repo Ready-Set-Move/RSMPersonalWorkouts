@@ -4,4 +4,5 @@ interface DeviceService {
     fun setTara()
     fun calibrate()
     fun readSettings()
+    fun disconnect()
 }

@@ -18,9 +18,25 @@ data class DeviceState(
     val connectionState: ConnectionState = ConnectionState.DISCONNECTED,
 ) : State
 
-sealed class WifiConfiguration {
-    data class WifiDirectAPConnection(val ssid: String = "isoX", val passphrase: String?): WifiConfiguration()
-    data class WifiExternalWLANConnection(val deviceDnsName: String): WifiConfiguration()
+interface HasWifiPorts {
+    val tcpPort: Int
+    val udpPort: Int
+}
+data class WifiPorts(
+    override val tcpPort: Int = 3333,
+    override val udpPort: Int = 15353
+): HasWifiPorts
+
+sealed class WifiConfiguration: HasWifiPorts {
+    data class WifiDirectAPConnection(
+        val ssid: String = "isoX Joes",
+        val passphrase: String? = "pass",
+        val wifiPorts: WifiPorts = WifiPorts(),
+    ): WifiConfiguration(), HasWifiPorts by wifiPorts
+    data class WifiExternalWLANConnection(
+        val deviceDnsName: String = "isoX-joes",
+        val wifiPorts: WifiPorts = WifiPorts(),
+    ): WifiConfiguration(), HasWifiPorts by wifiPorts
 }
 
 sealed class ConnectionConfiguration {
@@ -40,7 +56,6 @@ sealed class DeviceChange {
 sealed class DeviceAction: Action {
     data class SetConnectionType(val connectionConfiguration: ConnectionConfiguration): DeviceAction()
     object ScanAndConnect: DeviceAction()
-    object ResetConnection: DeviceAction()
     object ReadSettings: DeviceAction()
     object SetTara: DeviceAction()
     object Calibrate: DeviceAction()

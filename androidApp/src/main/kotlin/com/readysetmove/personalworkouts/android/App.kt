@@ -64,16 +64,10 @@ class App : Application() {
                 val bluetoothService = AndroidBluetoothService(androidContext())
 
                 val initialState = DeviceState(
-//                    connectionConfiguration = ConnectionConfiguration.WifiConnection(
-//                        configuration = WifiConfiguration.WifiDirectAPConnection(
-//                            ssid = "isoX"
-//                        )
-//                    ),
 //                    connectionConfiguration = ConnectionConfiguration.BLEConnection(deviceName = "isoX"),
                     connectionConfiguration = ConnectionConfiguration.WifiConnection(
-                        configuration = WifiConfiguration.WifiExternalWLANConnection(
-                            deviceDnsName = "isoX-joes"
-                        )
+                        configuration = WifiConfiguration.WifiDirectAPConnection()
+//                        configuration = WifiConfiguration.WifiExternalWLANConnection()
                     ),
                 )
 

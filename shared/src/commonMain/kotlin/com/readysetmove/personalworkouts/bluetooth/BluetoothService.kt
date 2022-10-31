@@ -19,12 +19,13 @@ const val calibrate: Byte = 115
 const val readAll: Byte = 117
 const val getWiFiStatus: Byte = 78
 const val getWiFiStartMode: Byte = 74
+const val setWiFiStartMode: Byte = 73
+const val setAPPassword: Byte = 84
 const val getAverage: Byte = 120
 
 interface BluetoothService: DeviceService {
     fun connectToDevice(
         connectionConfiguration: ConnectionConfiguration.BLEConnection,
-        externalScope: CoroutineScope,
     ): Flow<DeviceChange>
 
     sealed class BluetoothException(message: String) : Exception(message), IsDisconnectCause {
